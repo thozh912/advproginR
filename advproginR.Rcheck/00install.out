@@ -1,0 +1,12 @@
+* installing *source* package 'advproginR' ...
+** R
+** preparing package for lazy loading
+[1] "hello"
+** help
+Warning: D:/R_HW/advproginR.Rcheck/00_pkg_src/advproginR/man/advproginR-package.Rd:32: All text must be in a section
+*** installing help indices
+** building package indices
+** testing if installed package can be loaded
+*** arch - i386
+*** arch - x64
+* DONE (advproginR)
