@@ -64,5 +64,3 @@ djikstra <- function(graph, init_node){
   }
   return(resultvec2)
 }
-
-djikstra(wiki_graph,3)
