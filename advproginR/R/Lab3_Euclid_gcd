@@ -1,5 +1,3 @@
-rm(list=ls())
-
 euclidean <- function(a,b){
   while(b != 0){
     t <- b
@@ -9,5 +7,4 @@ euclidean <- function(a,b){
   return(a)
 }
 
-euclidean(123612,13892347912)
-euclidean(100,1000)
+
