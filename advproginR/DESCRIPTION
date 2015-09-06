@@ -3,7 +3,7 @@ Title: Provides Euclidean Algorithm And Djikstra Algorithm
 Version: 0.1.1
 Date: 2015-08-29
 Authors@R: c(
-    person("Andrea", "Bruzzone", email = "andrea.bruzzone92@gmail.com", role = c("aut", "cre"))
+    person("Andrea", "Bruzzone", email = "andrea.bruzzone92@gmail.com", role = c("aut")),
     person("Thomas", "Zhang", email = "thomaszhangswe@gmail.com", role = c("aut", "cre"))
     )
 Description: This package provides a way to find the gcd of two integers
