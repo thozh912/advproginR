@@ -16,10 +16,10 @@
 #'   
 #'   \describe{
 #'   
-#'   \item{1}{The integer numbers of the starting nodes of the edges in the
+#'   \item{1}{The numeric or integer numbers of the starting nodes of the edges in the
 #'   graph}
 #'   
-#'   \item{2}{The integer numbers of the ending nodes of the edges in the graph}
+#'   \item{2}{The numeric or integer numbers of the ending nodes of the edges in the graph}
 #'   
 #'   \item{3}{The numeric edge weights of the edges in the graph}
 #'   
@@ -71,15 +71,19 @@ dijkstra <- function(graph, init_node){
   resultvec <- c()
   nodevec <- c()
   unvisited_nodes <- c()
+  #prev_node <-rep(NA,length(unique(graph[[1]])))
   
   for(i in unique(graph[[1]])){
     if( init_node != i){
       
       dist[i] <- Inf 
     }
+      
+    
     unvisited_nodes <- c(unvisited_nodes,i)
   }
-  
+  #print(dist)
+  #print(unvisited_nodes)
   
   while(length(unvisited_nodes) != 0){
     
@@ -89,6 +93,9 @@ dijkstra <- function(graph, init_node){
     
     min_dist_node <- unvisited_nodes[min_dist_index]
     
+    #print(min_dist_index)
+    #print(min_dist_value)
+    #print(min_dist_node)
     dist <- dist[-min_dist_index]
     
     unvisited_nodes <- unvisited_nodes[-min_dist_index]
@@ -100,12 +107,19 @@ dijkstra <- function(graph, init_node){
       
       if(alt < dist[which(unvisited_nodes == nb)]){
         
-        dist[which(unvisited_nodes == nb)] <- alt  
+        dist[which(unvisited_nodes == nb)] <- alt
+        
+        #print(dist[which(unvisited_nodes == nb)])
       }
     }
+    
     resultvec <- c(resultvec,min_dist_value)
+    #print(resultvec)
     nodevec <- c(nodevec,min_dist_node)
-    resultvec2 <- resultvec[nodevec] 
+    #print(nodevec)
+    
+    
   }
-  return(resultvec2)
+  
+  return(resultvec[order(nodevec)])
 }
