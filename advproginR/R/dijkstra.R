@@ -116,10 +116,7 @@ dijkstra <- function(graph, init_node){
     resultvec <- c(resultvec,min_dist_value)
     #print(resultvec)
     nodevec <- c(nodevec,min_dist_node)
-    #print(nodevec)
-    
-    
   }
-  
   return(resultvec[order(nodevec)])
+
 }
