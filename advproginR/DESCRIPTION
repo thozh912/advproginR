@@ -2,12 +2,14 @@ Package: advproginR
 Title: Provides Euclidean Algorithm And Djikstra Algorithm
 Version: 0.1.1
 Date: 2015-08-29
-Author: Andrea Bruzzone, Thomas Zhang
-Maintainer: Thomas Zhang <thomaszhangswe@gmail.com>
+Authors@R: c(
+    person("Andrea", "Bruzzone", email = "andrea.bruzzone92@gmail.com", role = c("aut", "cre"))
+    person("Thomas", "Zhang", email = "thomaszhangswe@gmail.com", role = c("aut", "cre"))
+    )
 Description: This package provides a way to find the gcd of two integers
     by way of the euclidean algorithm. The package also provides a way to
     find the shortest distance to all nodes in a graph using Djikstras algorithm.
 Depends: R (>= 3.1.0)    
-License: GPL-2
+License: CC0
 LazyData: true
 Suggests: testthat
