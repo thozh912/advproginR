@@ -16,10 +16,10 @@
 #'   
 #'   \describe{
 #'   
-#'   \item{1}{The integer numbers of the starting nodes of the edges in the
+#'   \item{1}{The numeric or integer numbers of the starting nodes of the edges in the
 #'   graph}
 #'   
-#'   \item{2}{The integer numbers of the ending nodes of the edges in the graph}
+#'   \item{2}{The numeric or integer numbers of the ending nodes of the edges in the graph}
 #'   
 #'   \item{3}{The numeric edge weights of the edges in the graph}
 #'   
@@ -105,7 +105,7 @@ dijkstra <- function(graph, init_node){
     }
     resultvec <- c(resultvec,min_dist_value)
     nodevec <- c(nodevec,min_dist_node)
-    resultvec2 <- resultvec[nodevec] 
+
   }
-  return(resultvec2)
+  return(resultvec[order(nodevec)])
 }
