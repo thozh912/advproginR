@@ -53,14 +53,15 @@ qqline(resi)
 
 data(milk)
 
-plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk",xlab="year")
+plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk",xlab="year",col=4)
+points(milk,pch=as.vector(season(milk)))
 
 delay_scatter(milk,1,"Monthly milk/cow in month t against monthly milk/cow in month t_delayed where")
 delay_scatter(milk,6,"Monthly milk/cow in month t against monthly milk/cow in month t_delayed where")
 delay_scatter(milk,12,"Monthly milk/cow in month t against monthly milk/cow in month t_delayed where")
 
 v1 = lm(milk ~ time(milk))
-plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk", xlab ="year")
+plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk", xlab ="year",col=4)
 lines(ts(fitted(v1),start=c(1994,1),freq=12),col=2)
 legend("topright",c("Red line is a fitted linear model"))
 
@@ -69,7 +70,7 @@ acf_milk_residuals <- acf(milk_residuals,main="Autocorrelation function of resid
 
 month. = season(milk)
 v2 = lm(milk ~ month. + time(milk))
-plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk",xlab="year")
+plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk",xlab="year",col=4)
 lines(ts(fitted(v2),start=c(1994,1),freq=12),col=3)
 legend("topleft",c("Green line is a fitted seasonal model"))
 
@@ -80,6 +81,8 @@ points(resid,pch=as.vector(season(milk)))
 acf_seasonal_residuals<-acf(resid,main="Autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="ACF")
 qqnorm(resid,main=c("Quantiles of the residuals of the seasonal model","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="seasonal model residual quantiles")
 qqline(resid)
+
+
 
 #The first model M1 is an AR(1) model with root x = 1/0.8 = 5/4. It is stationary.
 #The second model M2 is not stationary since phi2 - phi1 = 1
