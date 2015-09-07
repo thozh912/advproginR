@@ -1,6 +1,7 @@
 rm(list=ls())
-rhine = read.csv2("Rhine.csv")
-silver = read.csv2("silver.csv")
+library(TSA)
+rhine = read.csv2("CopyOfRhine.csv")
+silver = read.csv2("CopyOfsilver.csv")
 head(rhine)
 
 rhine_ts = ts(rhine$TotN_conc,start=c(rhine$Year[1],rhine$Month[1]),freq=12)
