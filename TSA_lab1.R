@@ -12,9 +12,9 @@ points(rhine_ts,pch=as.vector(season(rhine_ts)))
 delay_scatter<-function(ts_name,delay,title){
   x<-c()
   y<-c()
-  for(point in (delay+1):length(rhine_ts)){
-    x<-c(x,rhine_ts[point-delay])
-    y<-c(y,rhine_ts[point])
+  for(point in (delay+1):length(ts_name)){
+    x<-c(x,ts_name[point-delay])
+    y<-c(y,ts_name[point])
   }
   
   plot(x,y,main=c(title,paste("t_delayed = t -",delay)),xlab=expression("X"[t_delayed]),ylab=expression("X"[t]))
@@ -25,7 +25,7 @@ delay_scatter(rhine_ts,1,"Scatterplot of N conc at time t against N conc at time
 delay_scatter(rhine_ts,6,"Scatterplot of N conc at time t against N conc at time t_delayed where")
 delay_scatter(rhine_ts,12,"Scatterplot of N conc at time t against N conc at time t_delayed where")
 
-acf_rhine_ts<-acf(rhine_ts,main="Autocorrelation function of Concentration of total Nitrogen in Rhine",xlab="years lag")
+
 
 m1 = lm(rhine_ts ~ time(rhine_ts))
 plot(rhine_ts,main="Concentration of total Nitrogen in Rhine monthly",ylab="conc",col=4)
@@ -33,7 +33,7 @@ lines(ts(fitted(m1),start=c(rhine$Year[1],rhine$Month[1]),freq=12),col=2)
 legend("topright",c("Red line is a fitted linear model"))
 
 rhine_residuals<- rstudent(m1)
-acf_rhine_resudials <- acf(rhine_residuals,main="Autocorrelation function of residuals of linear model",xlab="years lag")
+acf_rhine_residuals <- acf(rhine_residuals,main="Autocorrelation function of residuals of linear model",xlab="months lag")
 
 
 
@@ -44,12 +44,42 @@ lines(ts(fitted(m2),start=c(rhine$Year[1],rhine$Month[1]),freq=12),col=3)
 legend("topright",c("Green line is a fitted seasonal model"))
 
 resi <- rstudent(m2)
-#summary(m2)
+
 plot(resi,type="l",main="Residuals of the seasonal model of Conc of total Nitrogen in Rhine monthly",ylab="residual",xlab="Month after Dec 1988")
 points(resi,pch=as.vector(season(rhine_ts)))
 acf_seasonal_residuals<-acf(resi,main="Autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="ACF")
-qqnorm(resi,main="Quantiles of the residuals of the seasonal model against Theoretical gaussian quantiles", xlab="theoretical Gaussian quantiles", ylab="seasonal model residual quantiles")
+qqnorm(resi,main=c("Quantiles of the residuals of the seasonal model","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="seasonal model residual quantiles")
 qqline(resi)
+
+data(milk)
+
+plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk",xlab="year")
+
+delay_scatter(milk,1,"Monthly milk/cow in month t against monthly milk/cow in month t_delayed where")
+delay_scatter(milk,6,"Monthly milk/cow in month t against monthly milk/cow in month t_delayed where")
+delay_scatter(milk,12,"Monthly milk/cow in month t against monthly milk/cow in month t_delayed where")
+
+v1 = lm(milk ~ time(milk))
+plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk", xlab ="year")
+lines(ts(fitted(v1),start=c(1994,1),freq=12),col=2)
+legend("topright",c("Red line is a fitted linear model"))
+
+milk_residuals<- rstudent(v1)
+acf_milk_residuals <- acf(milk_residuals,main="Autocorrelation function of residuals of linear model",xlab="months lag")
+
+month. = season(milk)
+v2 = lm(milk ~ month. + time(milk))
+plot(milk,main="Average monthly milk production per cow in the US",ylab="lbs milk",xlab="year")
+lines(ts(fitted(v2),start=c(1994,1),freq=12),col=3)
+legend("topleft",c("Green line is a fitted seasonal model"))
+
+resid <- rstudent(v2)
+
+plot(resid,type="l",main="Residuals of the seasonal model of Average monthly milk production per cow",ylab="residual",xlab="Month after Dec 1993")
+points(resid,pch=as.vector(season(milk)))
+acf_seasonal_residuals<-acf(resid,main="Autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="ACF")
+qqnorm(resid,main=c("Quantiles of the residuals of the seasonal model","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="seasonal model residual quantiles")
+qqline(resid)
 
 #The first model M1 is an AR(1) model with root x = 1/0.8 = 5/4. It is stationary.
 #The second model M2 is not stationary since phi2 - phi1 = 1
