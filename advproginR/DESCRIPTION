@@ -1,6 +1,6 @@
 Package: advproginR
 Title: Provides Euclidean Algorithm And Djikstra Algorithm
-Version: 0.1.1
+Version: 1.0.0
 Date: 2015-08-29
 Authors@R: c(
     person("Andrea", "Bruzzone", email = "andrea.bruzzone92@gmail.com", role = c("aut")),

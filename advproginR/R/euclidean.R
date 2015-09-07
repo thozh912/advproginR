@@ -14,7 +14,7 @@
 #'   
 #' @return Returns the greatest common divisor between \code{a} and \code{b}.
 #'   
-#' @examples euclidean(5,18) returns 1
+#' @examples euclidean(5,18)
 #' 
 #' @references \url{http://en.wikipedia.org/wiki/Euclidean_algorithm}
 #'   

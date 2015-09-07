@@ -26,7 +26,7 @@ division where the remainder is zero and it returns the last denominator of
 the division.
 }
 \examples{
-euclidean(5,18) returns 1
+euclidean(5,18)
 }
 \references{
 \url{http://en.wikipedia.org/wiki/Euclidean_algorithm}
