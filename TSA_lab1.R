@@ -131,5 +131,33 @@ AR2sim(100,.8,0)
 AR2sim(100,-.5,.5)
 AR2sim(100,0,-.64)
 
+silver_ts <- ts(silver$EURO,start=c(silver$Date[1]),freq=52)
+plot(silver_ts,main="Price of one ounce silver in Euro",ylab="Euro",xlab="Years after 2004",col=10)
+# mean and variance is not constant
+logsilv <- log(silver_ts)
+difflogsilv <- diff(logsilv)
 
+plot(difflogsilv,main="Difference of logarithms of price of silver",xlab="Years after 2004",ylab="diff(log(Euro))",col=6)
+# mean is constant, not variance
+acf(difflogsilv, lag.max = 250, main=c("Autocorrelation function for the difference of","logarithms of price of silver"), xlab="Years lag",col=3)
+qqnorm(difflogsilv,main=c("Quantiles of the difference of logarithms of silver","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="diff(log(silver price)) quantiles")
+qqline(difflogsilv)
 
+boxcoxvaluessilver <- BoxCox.ar(silver_ts)
+#box suggests -,15 = lambda is best parameter value in that transform
+
+plot(diff(diff(logsilv)),main="Difference of difference of logarithms of price of silver",xlab="Years after 2004",ylab="diff(diff(log(Euro)))",col=9)
+acf(diff(difflogsilv),lag.max=250,main=c("Autocorrelation function for the difference of the difference of","logarithms of price of silver"),xlab="Years lag",ylab="diff(diff(log(Euro)))",col=2)
+qqnorm(diff(difflogsilv),main=c("Quantiles of the difference of difference of logarithms of silver","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="diff(diff(log(silver price))) quantiles")
+qqline(diff(difflogsilv))
+
+data(winnebago)
+plot(winnebago,main="Monthly sales of winnebagos in Forrest City,Iowa",xlab="year",ylab="units")
+logwinne <- log(winnebago)
+difflogwinne <- diff(logwinne)
+plot(difflogwinne,main="Difference of logarithms of winnebago sales monthly",xlab="Year",ylab="diff(log(units))",col=6)
+boxcoxvalueswinne <- BoxCox.ar(winnebago)
+#box best suggestion a log transform
+acf(difflogwinne,lag.max=60,main=c("Autocorrelation function for the difference of","logarithms of winnebago sales monthly"), xlab="Years lag",col=3)
+qqnorm(difflogwinne,main=c("Quantiles of the difference of logarithms of winnebago sales monthly","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="diff(log(units)) quantiles")
+qqline(difflogwinne)
