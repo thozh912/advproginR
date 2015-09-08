@@ -16,5 +16,6 @@ test_that("dijkstra produces error on incorrect input",{
 })
 test_that("graph has correct output",{
   expect_equal(length(dijkstra(wiki_graph,3)),6)
+  expect_equal(dijkstra(wiki_graph,3),c(9,10,0,11,11,2))
   
 })
