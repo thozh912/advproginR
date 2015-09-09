@@ -112,7 +112,12 @@ AR2autocorr<-function(phi1,phi2){
   return(result)
 }
 
+
 AR2autocorr(as.double(phi1),as.double(phi2))
+for(i in 1:length(phi1)){
+plot(AR2autocorr(as.double(phi1),as.double(phi2))[i,],type='h',main=c("Theoretical autocorrelation function for AR(2) process with phi1=",phi1[i],"and phi2=",phi2[i]),ylab="Theoretical ACF",xlab="lag")
+abline(a = 0 , b = 0)
+}
 AR2charroots(phi1,phi2)
 
 AR2sim <- function(T,phi1,phi2){
@@ -122,7 +127,7 @@ AR2sim <- function(T,phi1,phi2){
     AR2 <- c(AR2, phi1 * AR2[i+1] + phi2 * AR2[i] + rnorm(1) )
   }
   AR2 <-AR2[-1:-2]
-  plot(AR2,type="l", main = c("Simulated AR(2) time series with phi1=",phi1,"and phi2=",phi2))
+  plot(AR2,type="l", main = c("Simulated AR(2) time series with phi1=",phi1,"and phi2=",phi2),ylab="AR(2)", xlab="time")
   acf(ts(AR2),main =c("Autocorrelation function for AR(2) process with phi1=",phi1,"and phi2=",phi2))
   return(AR2)
 }
@@ -130,6 +135,15 @@ AR2sim <- function(T,phi1,phi2){
 AR2sim(100,.8,0)
 AR2sim(100,-.5,.5)
 AR2sim(100,0,-.64)
+
+#outside the stationary region we can pick phi1 = -1, phi2 = 0.5
+AR2sim(100,-1,0.5)
+#inside stationary region we can pick phi1 = 0.5, phi2 = 0.2
+AR2sim(100,0.5,0.2)
+
+#lets try setting T = 10000
+AR2sim(10000,0,-.64)
+
 
 silver_ts <- ts(silver$EURO,start=c(silver$Date[1]),freq=52)
 plot(silver_ts,main="Price of one ounce silver in Euro",ylab="Euro",xlab="Years after 2004",col=10)
@@ -144,8 +158,11 @@ qqnorm(difflogsilv,main=c("Quantiles of the difference of logarithms of silver",
 qqline(difflogsilv)
 
 boxcoxvaluessilver <- BoxCox.ar(silver_ts)
-#box suggests -,15 = lambda is best parameter value in that transform
+#box suggests -.15 = lambda is best parameter value in that transform
 
+transformedsilver <- (silver_ts^(-.15) - 1) / -.15
+
+plot(transformedsilver,main="Price of silver BoxCox_transform using lambda = -0.15",ylab="Transformed silver price",xlab="Years after 2004")
 plot(diff(diff(logsilv)),main="Difference of difference of logarithms of price of silver",xlab="Years after 2004",ylab="diff(diff(log(Euro)))",col=9)
 acf(diff(difflogsilv),lag.max=250,main=c("Autocorrelation function for the difference of the difference of","logarithms of price of silver"),xlab="Years lag",ylab="diff(diff(log(Euro)))",col=2)
 qqnorm(diff(difflogsilv),main=c("Quantiles of the difference of difference of logarithms of silver","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="diff(diff(log(silver price))) quantiles")
