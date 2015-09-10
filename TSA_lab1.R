@@ -81,7 +81,7 @@ points(resid,pch=as.vector(season(milk)))
 acf_seasonal_residuals<-acf(resid,main="Autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="ACF")
 qqnorm(resid,main=c("Quantiles of the residuals of the seasonal model","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="seasonal model residual quantiles")
 qqline(resid)
-
+pacf_seasonal_residuals <- acf(resid,type="partial",main="Partial autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="PACF")
 
 
 #The first model M1 is an AR(1) model with root x = 1/0.8 = 5/4. It is stationary.
