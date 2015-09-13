@@ -81,7 +81,7 @@ points(resid,pch=as.vector(season(milk)))
 acf_seasonal_residuals<-acf(resid,main="Autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="ACF")
 qqnorm(resid,main=c("Quantiles of the residuals of the seasonal model","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="seasonal model residual quantiles")
 qqline(resid)
-
+pacf_seasonal_residuals <- acf(resid,type="partial",main="Partial autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="PACF")
 
 
 #The first model M1 is an AR(1) model with root x = 1/0.8 = 5/4. It is stationary.
@@ -112,7 +112,12 @@ AR2autocorr<-function(phi1,phi2){
   return(result)
 }
 
+
 AR2autocorr(as.double(phi1),as.double(phi2))
+for(i in 1:length(phi1)){
+plot(AR2autocorr(as.double(phi1),as.double(phi2))[i,],type='h',main=c("Theoretical autocorrelation function for AR(2) process with phi1=",phi1[i],"and phi2=",phi2[i]),ylab="Theoretical ACF",xlab="lag")
+abline(a = 0 , b = 0)
+}
 AR2charroots(phi1,phi2)
 
 AR2sim <- function(T,phi1,phi2){
@@ -122,14 +127,37 @@ AR2sim <- function(T,phi1,phi2){
     AR2 <- c(AR2, phi1 * AR2[i+1] + phi2 * AR2[i] + rnorm(1) )
   }
   AR2 <-AR2[-1:-2]
-  plot(AR2,type="l", main = c("Simulated AR(2) time series with phi1=",phi1,"and phi2=",phi2))
-  acf(ts(AR2),main =c("Autocorrelation function for AR(2) process with phi1=",phi1,"and phi2=",phi2))
+  plot(AR2,type="l", main = c("Simulated AR(2) time series with phi1=",phi1,"and phi2=",phi2),ylab="AR(2)", xlab="time")
+  acf(ts(AR2),main =c("Autocorrelation function for AR(2) process with phi1=",phi1,"and phi2=",phi2),lag.max=20)
   return(AR2)
 }
 
-AR2sim(100,.8,0)
-AR2sim(100,-.5,.5)
-AR2sim(100,0,-.64)
+#The convention for ma parameters in stats package is opposite to the book by Cryer and Chan
+
+MA1 <- arima.sim(n=100, list( ma = c(0.9)))
+plot(MA1,type="l", main = c("Simulated MA(1) time series with theta1=0.9"),ylab="MA(1)", xlab="time")
+acf(MA1,main =c("Autocorrelation function for MA(1) process with theta1=0.9"),ylab="MA(1)")
+MA2 <- arima.sim(n=100, list( ma = c(1.5,-.9)))
+plot(MA2,type="l", main = c("Simulated MA(2) time series with theta1=1.5","and theta2=-0.9"),ylab="MA(2)", xlab="time")
+acf(MA2,main =c("Autocorrelation function for MA(2) process with theta1=1.5","and theta2=-0.9"),ylab="MA(2)")
+ARMA11 <-arima.sim(n=100, list( ar = c(0.6),ma = c(0.8)))
+plot(ARMA11,type="l", main = c("Simulated ARMA(1,1) time series with phi1=0.6","and theta2=0.8"),ylab="ARMA(1,1)", xlab="time")
+acf(ARMA11,main =c("Autocorrelation function for ARMA(1,1) process with phi1=0.6","and theta2=0.8"),ylab="ARMA(1,1)")
+
+m1sim <- AR2sim(100,.8,0)
+varm1sim <- var(m1sim)
+m2sim <- AR2sim(100,-.5,.5)
+varm2sim <- var(m2sim)
+m3sim <- AR2sim(1000,0,-.64)
+varm3sim  <- var(m3sim)
+
+#outside the stationary region we can pick phi1 = -1, phi2 = 0.5
+AR2sim(100,-1,0.5)
+
+
+#lets try setting T = 10000
+AR2sim(10000,0,-.64)
+AR2autocorr(-1,0.5)
 
 silver_ts <- ts(silver$EURO,start=c(silver$Date[1]),freq=52)
 plot(silver_ts,main="Price of one ounce silver in Euro",ylab="Euro",xlab="Years after 2004",col=10)
@@ -144,8 +172,11 @@ qqnorm(difflogsilv,main=c("Quantiles of the difference of logarithms of silver",
 qqline(difflogsilv)
 
 boxcoxvaluessilver <- BoxCox.ar(silver_ts)
-#box suggests -,15 = lambda is best parameter value in that transform
+#box suggests -.15 = lambda is best parameter value in that transform
 
+transformedsilver <- (silver_ts^(-.15) - 1) / -.15
+
+plot(transformedsilver,main="Price of silver BoxCox_transform using lambda = -0.15",ylab="Transformed silver price",xlab="Years after 2004")
 plot(diff(diff(logsilv)),main="Difference of difference of logarithms of price of silver",xlab="Years after 2004",ylab="diff(diff(log(Euro)))",col=9)
 acf(diff(difflogsilv),lag.max=250,main=c("Autocorrelation function for the difference of the difference of","logarithms of price of silver"),xlab="Years lag",ylab="diff(diff(log(Euro)))",col=2)
 qqnorm(diff(difflogsilv),main=c("Quantiles of the difference of difference of logarithms of silver","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="diff(diff(log(silver price))) quantiles")
@@ -154,10 +185,15 @@ qqline(diff(difflogsilv))
 data(winnebago)
 plot(winnebago,main="Monthly sales of winnebagos in Forrest City,Iowa",xlab="year",ylab="units")
 logwinne <- log(winnebago)
+
+
 difflogwinne <- diff(logwinne)
+
 plot(difflogwinne,main="Difference of logarithms of winnebago sales monthly",xlab="Year",ylab="diff(log(units))",col=6)
 boxcoxvalueswinne <- BoxCox.ar(winnebago)
 #box best suggestion a log transform
 acf(difflogwinne,lag.max=60,main=c("Autocorrelation function for the difference of","logarithms of winnebago sales monthly"), xlab="Years lag",col=3)
 qqnorm(difflogwinne,main=c("Quantiles of the difference of logarithms of winnebago sales monthly","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="diff(log(units)) quantiles")
+
 qqline(difflogwinne)
+
