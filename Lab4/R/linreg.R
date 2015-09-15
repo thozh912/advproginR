@@ -80,7 +80,6 @@ linreg <- setRefClass("linreg",
           X <- model.matrix(formula,data)
           formulanames <- all.vars(formula)
           y <- data[,which(names(data) == formulanames[1])]
-       
           .self$coefficients <- solve(t(X) %*% X) %*% t(X) %*% y
           .self$predicted <- X %*% .self$coefficients
           .self$residual <- y -  .self$predicted
@@ -88,9 +87,7 @@ linreg <- setRefClass("linreg",
           .self$residualvar <- sum(.self$residual * .self$residual) / .self$df
           .self$varregcoefficients <-.self$residualvar * solve(t(X) %*% X)
           .self$tvalues <- .self$coefficients / sqrt(diag(.self$varregcoefficients))
-          .self$pvalues <- 2 * (1 - pt(abs(.self$tvalues),.self$df))
-          
-      
+          .self$pvalues <- 2 * (1 - pt(abs(.self$tvalues),.self$df))    
     },
     print = function(){
       "Gives a printout of the call as well as the calculated regression coefficients."
@@ -110,12 +107,10 @@ linreg <- setRefClass("linreg",
       blender <- as.character(.self$formula)
       formulastring <- paste(blender[2],blender[1],blender[3])
       resifitted <- data.frame(Residuals= .self$residual, fitted = .self$predicted, sqrtstdresid = sqrt(abs(.self$residual / sqrt(.self$residualvar))))
-     
       plot1 <- ggplot(resifitted,aes(fitted,Residuals)) + geom_smooth( se=FALSE, color = "red") + geom_point(shape=1) + xlab(paste("Fitted values: linreg","(","formula = ",formulastring,")",sep="")) + ggtitle("Residuals vs Fitted") + 
         theme_bw() +
         theme(panel.grid.major = element_blank(),
               panel.grid.minor = element_blank())
-      
       plot2 <- ggplot(resifitted,aes(fitted, sqrtstdresid)) + geom_smooth(se=FALSE, color= "red") + geom_point(shape=1) + xlab(paste("Fitted values: linreg","(","formula = ",formulastring,")",sep=""))+ ylab("sqrt(abs(Standardized residuals))") + ggtitle("Scale-Location") +
         theme_bw() +
         theme(panel.grid.major = element_blank(),
@@ -150,10 +145,7 @@ linreg <- setRefClass("linreg",
       coefmat <- data.frame(.self$coefficients, sqrt(diag(.self$varregcoefficients)), .self$tvalues , .self$pvalues )
       names(coefmat) <- c("Estimate", "Std. Error", "t Value", "Pr(>|t|)")
       writeLines(c(line1,line2,"Coefficients:"))
-
-      
       return(coefmat)
     }
   )
 )
-  
