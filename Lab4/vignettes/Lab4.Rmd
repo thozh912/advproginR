@@ -1,0 +1,70 @@
+---
+title: "Lab 4 Linear Regression"
+author: "Andrea Bruzzone, Thomas Zhang"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Lab 4 Linear Regression}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+
+## Lab4 package Info
+
+This package contains the RC generator function linreg and imports packages ggplot2, grid and gridExtra.
+You can use linreg in this package to create objects of class linreg. Linreg take inputs a formula and a data.frame
+and returns a class linreg object. Linreg performs a linear regression using ordinary least squares and stores the result in
+the linreg object as long as the response is not a factor.
+
+## Methods
+You can apply some different methods to your linreg object in order to return values, such as finding the residual values, the predicted values and the residual variance of the linear model as well as the t-values for each regression coefficient.
+
+
+For example for the dataset iris, you can get the predicted values using pred():
+```{r}
+library(Lab4)
+exIris <- linreg(Petal.Length ~ Sepal.Width,iris)
+head(exIris$pred())
+```
+Note that the fitted values are not automatically ordered, but in the same order as they appear in the data.frame.
+
+
+With the print() method you can have a printout of the call as well as the calculated 
+regression coefficients.
+```{r}
+exIris$print()
+```
+
+
+
+The plot() method returns two different plots in a grid. The first one is the plot of residuals vs. fitted values, the second graph plots the square root of the absolute values of the standardized residuals vs. fitted values. The fit in each plot is performed by glm.fit by default, but
+by loess for data points <1000.
+```{r, fig.width=6,fig.height=7,message=FALSE}
+library(ggplot2)
+library(gridExtra)
+exIris$plot()
+```
+
+The coef() method returns a named vector of the regression coefficients of the linear model.
+```{r}
+exIris$coef()
+```
+The resid() method returns a vector of the residuals of the linear model.
+```{r}
+head(exIris$resid())
+```
+
+Another important method is summary(), with which you can print out a summary of the linear regression performed. So, for example, using
+again the dataset Iris we can call:
+```{r}
+exIris$summary()
+```
+
+## Finishing remarks
+Sometimes, if the class of your dataset is not data.frame, you have to use as.data.frame() in order to coerce it into a data.frame.
+This includes some of the datasets that come with R, since they state multiple classes when asked by the class() function.
+
+
+
