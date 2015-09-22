@@ -12,5 +12,5 @@
 #' upon input formula and data.frame. All the calculations are done and stored in the fields of the 
 #' object upon initialization. The methods just returns the values.
 #' 
-#' 
+#' @export
 NULL
