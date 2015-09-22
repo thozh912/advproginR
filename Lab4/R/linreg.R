@@ -52,6 +52,7 @@
 #' data(faithful)
 #' linearobject <- linreg(formula = eruptions ~ waiting, data = faithful)
 #' linearobject$summary()
+#' @export
 
 
 
@@ -149,3 +150,4 @@ linreg <- setRefClass("linreg",
     }
   )
 )
+
