@@ -100,7 +100,7 @@ resi <- rstandard(m2)
 plot(resi,type="l",main="Residuals of the seasonal model",ylab="residual",xlab="Months after 1 Jan 1990")
 points(resi,pch=as.vector(season(ele_model)))
 acf_seasonal_residuals<-acf(resi,main="Autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="ACF",lag.max=36)
-acf_seasonal_residuals<-pacf(resi,main="Partial Autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="PACF",lag.max=36)
+pacf_seasonal_residuals<-pacf(resi,main="Partial Autocorrelation function of the residuals of the seasonal model",xlab="months lag",ylab="PACF",lag.max=36)
 eacf(resi)
 qqnorm(resi,main=c("Quantiles of the residuals of the seasonal model","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="seasonal model residual quantiles")
 qqline(resi)
@@ -121,3 +121,22 @@ plot(seasonaldiff)
 acf(seasonaldiff,lag.max=36)
 pacf(seasonaldiff,lag.max=36)
 Box.test(seasonaldiff,type="Ljung",lag=25)
+
+
+# arima(1,0,0) x (1,1,0)12
+ar1 <- arima(ele_model, order = c(1,0,0), seasonal = list(order = c(1,1,0)))
+
+
+plot(rstandard(ar1))
+acf(rstandard(ar1))
+pacf(rstandard(ar1))
+hist(rstandard(ar1))
+qqnorm(rstandard(ar1))
+qqline(rstandard(ar1))
+
+pre <- predict(ar1, newdata = ele_test, n.ahead = 12)
+
+plot(ar1, n1 = c(1), n.ahead = 24)
+
+plot(forecast(ar1))
+
