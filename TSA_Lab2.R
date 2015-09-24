@@ -1,7 +1,7 @@
 rm(list=ls())
 library(forecast)
 library(TSA)
-library("gridExtra")
+library(gridExtra)
 
 
 
@@ -82,13 +82,15 @@ AR2simaggregator(30,1.6,-0.9,5)
 
 ele_con <- read.csv2("electricity_consumption.csv")
 
-ele_ts <- ts(ele_con,start=c(1),freq=12)
+ele_ts <- ts(ele_con,start=c(1,1),freq=12)
+ele_ts <- ele_ts[,2]
 #plot(ele_ts,main="total Swedish electricity consumption in GWh 1990-2014",xlab="Years after 1 Jan 1989",ylab="GWh")
-ele_model <- window(ele_ts,start=1,end=12)
+ele_model <- window(ele_ts,start=start(ele_ts),end=c(end(ele_ts)[1]-13, end(ele_ts)[2]),freq=12)
 
-ele_model <- ele_model[,2]
+
 #plot(ele_model,main="total Swedish electricity consumption in GWh 1990-2014",xlab="Years after 1 Jan 1989",ylab="GWh")
-ele_test <- window(ele_ts,start=12,end=26)
+ele_test <- window(ele_ts,start=c(end(ele_ts)[1]-13, end(ele_ts)[2]),end=end(ele_ts),freq=12)
+
 
 # DETERMINISTIC SEASONAL FIT FOLLOWED BY ARIMA(1,0,3) MODEL
 
@@ -150,7 +152,7 @@ eacf(fit_ar1_ma3_res,ar.max=25,ma.max=36)
 
 #KISS MODEL FOUND BY ANDREA
 
-ar1 <- arima(ele_model, order = c(1,0,0), seasonal = list(order = c(1,1,0)))
+ar1 <- Arima(ele_model, order = c(1,0,0), seasonal = list(order = c(1,1,0)))
 res_ar1 <- rstandard(ar1)
 
 plot(res_ar1,main="Residuals of seasonal ARIMA(1,0,0)X(1,1,0) model",ylab="residual",xlab="Years after 1 Jan 1989")
@@ -165,105 +167,45 @@ Box.test(res_ar1,type="Ljung",lag=50)
 
 # FORECASTING (under construction)
 
-pre <- predict(ar1,n.ahead = 12)
-plot(pre$pred,type="l")
 
-plot(ar1, n1 = c(1), n.ahead = 24)
+
+
+pre <- predict(ar1,n.ahead = length(ele_test))
+
+plot(ele_ts,type="l",ylim=c(6000,21000),main="total Swedish electricity consumption in GWh 1990-2014",xlab="Years after 1 Jan 1989",ylab="GWh")
+lines(pre$pred,col="red",lty=2)
+lines(pre$pred + 2*pre$se,col="blue",lty=3)
+lines(pre$pred - 2*pre$se,col="blue",lty=3)
+legend( x="topleft", 
+        legend=c("Actual observations","Predicted values","95% prediction bands"),
+        col=c("black","red","blue"), lwd=1, lty=c(1,2,3) 
+         )
+
+
+plot(ele_test,type="l",ylim=c(6000,21000),main="total Swedish electricity consumption in GWh 1990-2014",xlab="Years after 1 Jan 1989",ylab="GWh")
+lines(pre$pred,col="red",lty=2)
+lines(pre$pred + 2*pre$se,col="blue",lty=3)
+lines(pre$pred - 2*pre$se,col="blue",lty=3)
+legend( x="topleft", 
+        legend=c("Actual observations","Predicted values","95% prediction bands"),
+        col=c("black","red","blue"), lwd=1, lty=c(1,2,3) 
+)
+
+count_out_of_bands <- function(prediction,test_course){
+  counter = 0
+  for(i in 1:length(ele_test)){
+    if(test_course[i] < prediction$pred[i] - 2*prediction$se[i] | test_course[i] > prediction$pred[i] + 2*prediction$se[i] ){
+      counter = counter + 1
+    }
+  }
+  return(paste("We have",counter,"observations outside the 95% prediction bands out of",length(test_course),"observations."))
+}
+
+count_out_of_bands(pre,ele_test)
+
+
+plot(ar1, n1 = c(1), n.ahead = length(ele_test))
 
 plot(forecast(ar1))
-
----
-title: "Time Series Analysis Lab 2"
-author: "Andrea Bruzzone,Thomas Zhang"
-date: "Thursday, September 24, 2015"
-output: html_document
----
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-Problem 1
-
-AR(2) process is represented by $Y_{t}-\phi_{1}Y_{t-1}-\phi_{2}Y_{t-2}=\epsilon_{t}$. The Conditional sum of squares is: $$S_{c}\left(\phi_{1},\phi_{2}\right) = \sum_{t=3}^{n}\,\left[Y_{t}-\phi_{1}Y_{t-1}-\phi_{2}Y_{t-2}\right]^{2}$$
-
-The stationary variance can be calculated by 
-$$
-\begin{aligned}
-\gamma_{0} &=\textbf{E}\left[\phi_{1}Y_{t-1}+\phi_{2}Y_{t-2}+\epsilon_{t}\right]^{2}\\
-&=\phi_{1}^2\textbf{E}\left[Y_{t-1}^2\right]+\phi_{2}^2\textbf{E}\left[Y_{t-2}^2\right]+2\phi_{1}^2\phi_{2}^2\textbf{E}\left[Y_{t-1}Y_{t-2}\right]+\sigma_{\epsilon}^2\\
-&=(\phi_{1}^2\phi_{2}^2)\gamma_{0}+2\phi_{1}\phi_{2}\gamma_{1}+\sigma_{\epsilon}^2\\
-\gamma_{0}\left[1-\phi_{1}^2-\phi_{2}^2-\frac{(2\phi_{1}^2\phi_{2})}{(1-\phi_{2})}\right] &=\sigma_{\epsilon}^2\\
-\gamma_{0}&=\frac{1-\phi_{2}}{(1-\phi_{2})(1-\phi_{1}^2-\phi_{2}^2)-(2\phi_{1}^2\phi_{2})}\sigma_{\epsilon}^2
-\end{aligned}
-$$
-We used the fact that, for AR(2) processes: 
-$$
-\begin{aligned}
-\gamma_{1} &= \frac{\phi_{1}\gamma_{0}}{1-\phi_{2}}\\
-&= \frac{\phi_{1}}{1-\phi_{2}}\sigma_{\epsilon}^2\\
-&= \rho_{1}\sigma_{\epsilon}^2
-\end{aligned}
-$$
-We see that by comparison:
-$$
-\kappa = \frac{1-\phi_{2}}{(1-\phi_{2})(1-\phi_{1}^2-\phi_{2}^2)-(2\phi_{1}^2\phi_{2})}
-$$
-The Likelihood function can be calculated using the distribution of $(y_{3},y_{4},\dots)$ conditional on $(y_{1},y_{2})$
-$$
-f(y_{3},y_{4},\dots | y_{1},y_{2}) = (2\pi\sigma_{\epsilon}^{2})^{-\frac{(n-2)}{2}}\exp{\left[-\frac{1}{2\sigma_{\epsilon}^2} \sum_{t=3}^{n}\epsilon_{t}^2\right]}
-$$
-The Likelihood function is, then given by
-$$
-\begin{aligned}
-L(\phi_{1}, \phi_{2},\sigma_{\epsilon}^2 ) &= f(y_{3},y_{4},\dots | y_{1},y_{2})f(y_{1}y_{2})\\
-&=(2\pi\sigma_{\epsilon}^2)^{-\frac{n}{2}} \frac{1}{\kappa}\frac{1}{\sqrt{1-\rho_{1}^2}} \exp\left[-\frac{1}{2\sigma_{\epsilon}^2}S(\phi_{1},\phi_{2})\right]
-\end{aligned}
-$$
-where
-$$
-S(\phi_{1},\phi_{2})=\sum_{t=3}^{n}(Y_{t}-\phi_{1}Y_{t-1}-\phi_{2}Y_{t-2})^2+ \frac{1}{\kappa(1-\rho_{1}^2)}(Y_{1}^2+Y_{2}^2-2\rho_{1}Y_{2}Y_{1})
-$$
-
-Problem 3
-The model equation is 
-$$Y_{t}=Y_{t-1} + Y_{t-12} - Y_{t-13} + e_{t} - \theta e_{t-1} - \Theta e_{t-12} + \theta\Theta e_{t-13}$$
-And the one and two step-ahead predictors are given in terms of the past values and errors as
-$$
-\begin{aligned}
-\hat{Y}_{t}(1) &= Y_{t} + Y_{t-11} - Y_{t-12} - \theta e_{t} - \Theta e_{t-11} + \theta\Theta e_{t-12}\\
-\hat{Y}_{t}(2) &= \hat{Y}_{t}(1) + Y_{t-10} - Y_{t-11} + e_{t} - \Theta e_{t-10} + \theta\Theta e_{t-11}
-\end{aligned}
-$$
-We know that the forecast error is defined as: 
-$e_{t}(\ell)=Y_{t+\ell}-\hat{Y}_{\ell}$
-
-
-Thus, for our model we have:
-$e_{t}(1)=Y_{t+1}-\left(Y_{t} + Y_{t-11} - Y_{t-12} - \theta e_{t} - \Theta e_{t-11} + \theta\Theta e_{t-12}\right)$
-but we know that it is:
-
-
-$Y_{t+1}- Y_{t} = Y_{t-11}- Y_{t-12}+ e_{t+1} - \theta e_{t} - \Theta e_{t-11} + \theta \Theta e_{t-12} $
-
-
-so we can simplify into 
-$$e_{t}(1) = e_{t+1}$$
-
-And thus
-$Var(e_{t}(1))=Var(e_{t+1})=\sigma_{\epsilon}^2$
-
-
-For our model the one and two-step forecast error variances are the same:
-$Var(e_{t}(1)) = Var(e_{t}(2)) = \sigma_{\epsilon}^2$
-
-
-You can also embed plots, for example:
-
-```{r, echo=FALSE}
-plot(cars)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 
