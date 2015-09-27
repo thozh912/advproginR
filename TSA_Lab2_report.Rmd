@@ -1,18 +1,111 @@
 ---
 title: "Time Series Analysis Lab 2"
 author: "Andrea Bruzzone,Thomas Zhang"
-date: "Thursday, September 24, 2015"
-output: pdf_document
+date: "Sunday, September 27, 2015"
+output:
+  pdf_document:
+    fig_height: 5
+    fig_width: 8
 ---
+```{r,echo=FALSE,eval=TRUE,message=FALSE}
+library(forecast)
+library(TSA)
+library(gridExtra)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-Problem 1
+```
+## Problem 1.a.
 
 AR(2) process is represented by $Y_{t}-\phi_{1}Y_{t-1}-\phi_{2}Y_{t-2}=\epsilon_{t}$. The Conditional sum of squares is: $$S_{c}\left(\phi_{1},\phi_{2}\right) = \sum_{t=3}^{n}\,\left[Y_{t}-\phi_{1}Y_{t-1}-\phi_{2}Y_{t-2}\right]^{2}$$
 
+## Problem 1.b and 1.d
+Using our function to perform linear regression estimation of the parameters of a simulated AR(2) process, we get some values for $\phi_{1}$ and $\phi_{2}$ close to the true values. For example with a time series of length 30, with $$\phi_{1}=1.6,\phi_{2}=-0.9, \sigma=5$$ the AR(2) parameter estimations and their std. dev. estimation errors are:
+
+
+```{r, echo=FALSE, eval=TRUE}
+AR2sim <- function(T,phi1,phi2,sigma){
+  AR2 <- c(0,0)
+  
+  for(i in 1:T){
+    AR2 <- c(AR2, phi1 * AR2[i+1] + phi2 * AR2[i] + rnorm(1,0,sigma) )
+  }
+  AR2 <-AR2[-1:-2]
+  #plot(AR2,type="l", main = c(paste("Simulated AR(2) time series with phi1=",phi1),paste("and phi2=",phi2,"and sigma=",sigma)),ylab="AR(2)", xlab="time")
+  #acf(ts(AR2),main =c(paste("Autocorrelation function for AR(2) process with phi1=",phi1),paste("and phi2=",phi2,"and sigma=",sigma)),lag.max=20)
+  return(AR2)
+}
+
+
+
+AR2LS <- function(Y){
+  Yfront <- Y[-1:-2]
+  phi1_est <- Y[-c(1,length(Y))]
+  phi2_est <- Y[-(length(Y)-1):-length(Y)]
+  Ydata <- data.frame(Yfront,phi1_est,phi2_est)
+  
+  m1 <- lm(Yfront ~ phi1_est + phi2_est,Ydata)
+  
+  errorterms <- Yfront - m1$coefficients[2] * phi1_est - m1$coefficients[3] * phi2_est
+  cond_sumofsquares <- sum(errorterms^2)
+  wnvarest <- cond_sumofsquares / (length(Yfront) - 2)
+  wnsdest <- sqrt(wnvarest)
+  names(wnsdest) <- c("Estimate of the std. dev. of the white noise term in AR(2) process")
+  m1$coefficients <- c(m1$coefficients,wnsdest)
+  return(m1$coefficients)
+}
+
+AR2simaggregator <- function(T,phi1,phi2,sigma){
+  phi1estimates <-c()
+  phi2estimates <-c()
+  wnsdest <-c()
+  for(i in 1:100){
+    Y <- AR2sim(T,phi1,phi2,sigma)
+    phi1estimates <- c(phi1estimates,AR2LS(Y)[2])
+    phi2estimates <- c(phi2estimates,AR2LS(Y)[3])
+    wnsdest <- c(wnsdest,AR2LS(Y)[4])
+  }
+  #plot1 <- hist(phi1estimates)
+  #plot2 <- hist(phi2estimates)
+  #plot3 <- hist(wnsdest)
+  sdvec <- c(sd(phi1estimates-phi1),sd(phi2estimates-phi2),mean(wnsdest))
+  names(sdvec) <-c("Std. Dev. of phi_1 estimates","Std. Dev. of phi_2 estimates","mean of estimates of std. dev. of white noise term")
+  return(sdvec)
+}
+```
+
+```{r}
+Y <- AR2sim(30,1.6,-0.9,5)
+
+AR2LS(Y)
+
+
+```
+
+In order to get a sense of the standard errors of the estimated parameter values we run an aggregator function which simulates 100 AR(2) processes with the same parameters.
+
+```{r}
+AR2simaggregator(30,1.6,-0.9,5)
+```
+
+
+Let us now compare this to the $\tt{arima()}$ function with $\tt{method="ML"}$  
+```{r}
+arima(Y,order=c(2,0,0),include.mean=FALSE,method="ML")
+
+```
+
+We can see that the standard errors are smaller for the $\tt{arima()}$ function. We now try to increase the length of the simulated time series from 30 to 100 and see if our standard errors become smaller.
+
+```{r}
+Y <- AR2sim(100,1.6,-0.9,5)
+
+AR2LS(Y)
+AR2simaggregator(100,1.6,-0.9,5)
+
+```
+
+It is seen that the standard deviation of the parameter estimates becomes smaller and even better than the standard errors of the $\tt{arima()}$ function when  length of time series is set to 100.
+
+## Problem 1.c.
 The stationary variance can be calculated by 
 $$
 \begin{aligned}
@@ -51,7 +144,104 @@ $$
 S(\phi_{1},\phi_{2})=\sum_{t=3}^{n}(Y_{t}-\phi_{1}Y_{t-1}-\phi_{2}Y_{t-2})^2+ \frac{1}{\kappa(1-\rho_{1}^2)}(Y_{1}^2+Y_{2}^2-2\rho_{1}Y_{2}Y_{1})
 $$
 
-Problem 3
+## Problem 2
+
+We divided the time series in two parts, the first graph shows the entire time series and the second graph shows the modeling part in which a seasonal trend is evident. The series does not show outliers and it seems to be stationary in mean and variance. Thus, we tried to fit the modeling part with a deterministic seasonal trend model but still we can see some autocorrelations between different lags. The EACF suggests that an AR(1) model can be good to fit to the residuals of the deterministic seasonal model.
+
+```{r, echo=FALSE,fig.width=10}
+ele_con <- read.csv2("electricity_consumption.csv")
+
+ele_ts <- ts(ele_con,start=c(1,1),freq=12)
+ele_ts <- ele_ts[,2]
+plot(ele_ts,main="total Swedish electricity consumption in GWh 1990-2014",xlab="Years after 1 Jan 1989",ylab="GWh")
+ele_model <- window(ele_ts,start=start(ele_ts),end=c(end(ele_ts)[1]-13, end(ele_ts)[2]),freq=12)
+
+
+plot(ele_model,main="total Swedish electricity consumption in GWh 1990-2014",xlab="Years after 1 Jan 1989",ylab="GWh")
+ele_test <- window(ele_ts,start=c(end(ele_ts)[1]-13, end(ele_ts)[2]),end=end(ele_ts),freq=12)
+
+
+# month. = factor(rep(c("January","February","March","April","May","June","July","August","September",
+#                   "October","November","December"),12),levels=c("January","February","March","April","May","June","July","August","September",
+#                   "October","November","December"))
+month. = season(ele_model)
+
+m2 <- lm(ele_model ~ month. + time(ele_model))
+lines(ts(fitted(m2),start=c(1),freq=12),col=3)
+legend("topleft",c("Green line is a fitted deterministic seasonal model"))
+resi <- rstandard(m2)
+plot(resi,type="l",main="Residuals of the seasonal model",ylab="residual",xlab="Months after 1 Jan 1990")
+points(resi,pch=as.vector(month.))
+acf_seasonal_residuals<-acf(resi,main="Autocorrelation function of the residuals of the deterministic seasonal model",xlab="months lag",ylab="ACF",lag.max=36)
+pacf_seasonal_residuals<-pacf(resi,main="Partial Autocorrelation function of the residuals of the deterministic seasonal model",xlab="months lag",ylab="PACF",lag.max=36)
+eacf(resi)
+qqnorm(resi,main=c("Quantiles of the residuals of the deterministic seasonal model","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="deterministic seasonal model residual quantiles")
+qqline(resi)
+
+```
+
+
+
+We tried to fit the residuals of the seasonal model using an ARIMA(1,0,3) process. The sample ACF and sample PACF look good but it can be seen in the summary that some parameters do not look statistical significant.
+
+```{r, fig.width=10, fig.height = 6}
+ma4 <- arima(resi,order=c(1,0,3), seasonal = list(order = c(0,0,0)))
+fit_ar1_ma3_res <- rstandard(ma4)
+```
+
+```{r,echo=FALSE,fig.width=10, fig.height = 6}
+plot(fit_ar1_ma3_res,type="l",main="Residuals of ARIMA(1,0,3) fit to the residuals of fitted seasonal model",ylab="residual",xlab="Months after 1 Jan 1990")
+acf(fit_ar1_ma3_res,main=c("Autocorrelation function of the residuals of the","residuals of ARIMA(1,0,3) fit to the residuals of fitted seasonal model"),xlab="months lag",ylab="ACF",lag.max=36)
+pacf(fit_ar1_ma3_res,main=c("Partial Autocorrelation function of the","residuals of ARIMA(1,0,3) fit to the residuals of fitted seasonal model"),,xlab="months lag",ylab="PACF",lag.max=36)
+
+qqnorm(fit_ar1_ma3_res,main=c("Quantiles of the residuals of ARIMA(1,0,3) fit to the residuals of fitted seasonal model",
+                              "against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="ARIMA(1,0,3) fit to residuals of seasonal model residual quantiles")
+qqline(fit_ar1_ma3_res)
+tsdiag(ma4,gof.lag=36)
+ma4
+Box.test(fit_ar1_ma3_res,type="Ljung",lag=36)
+eacf(fit_ar1_ma3_res,ar.max=9,ma.max=15)
+
+```
+
+
+Since the EACF of the residuals of the modeling part suggested an AR(1) process to fit the series and since there is a seasonal trend, we try a new model that is an ARIMA(1,0,0)x(1,1,0).
+
+
+```{r,fig.width=10}
+ar1 <- Arima(ele_model, order = c(1,0,0), seasonal = list(order = c(1,1,0)))
+res_ar1 <- rstandard(ar1)
+```
+
+```{r,echo=FALSE,fig.width=10}
+plot(res_ar1,main="Residuals of seasonal ARIMA(1,0,0)X(1,1,0) model",ylab="residual",xlab="Years after 1 Jan 1989")
+acf(res_ar1,main="Autocorrelation function of the residuals of seasonal ARIMA(1,0,0)X(1,1,0)",xlab="years lag",ylab="ACF",lag.max=36)
+pacf(res_ar1,main="Partial Autocorrelation function of the residuals of seasonal ARIMA(1,0,0)X(1,1,0)",xlab="years lag",ylab="PACF",lag.max=36)
+
+qqnorm(res_ar1,main=c("Quantiles of the residuals of the seasonal ARIMA(1,0,0)X(1,1,0)","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="seasonal ARIMA(1,0,0)X(1,1,0) residual quantiles")
+qqline(res_ar1)
+
+tsdiag(ar1,gof.lag=36)
+ar1
+
+Box.test(res_ar1,type="Ljung",lag=36)
+eacf(res_ar1,ar.max=10,ma.max=15)
+```
+
+The analysis of the residuals shows that an Arima(1,0,0)x(1,1,0) process is a good model and it is better than the ARIMA(1,0,3) process because it is a model with less parameters. We also see that the AIC is larger in this model.
+
+
+
+
+
+
+
+
+
+
+
+
+## Problem 3.a.
 The model equation is 
 $$Y_{t}=Y_{t-1} + Y_{t-12} - Y_{t-13} + e_{t} - \theta e_{t-1} - \Theta e_{t-12} + \theta\Theta e_{t-13}$$
 And the one and two step-ahead predictors are given in terms of the past values and errors as
@@ -83,11 +273,75 @@ $Var(e_{t}(1))=Var(e_{t+1})=\sigma_{\epsilon}^2$
 For our model the one and two-step forecast error variances are the same:
 $Var(e_{t}(1)) = Var(e_{t}(2)) = \sigma_{\epsilon}^2$
 
+## Problem 3.b.
+For predicting the monthly electrical consumption we use the Arima(1,0,0)x(1,1,0) process model.
+```{r,echo=FALSE}
+pre <- predict(ar1,n.ahead = length(ele_test))
 
-You can also embed plots, for example:
+plot(ele_ts,type="l",ylim=c(6000,21000),main="total Swedish electricity consumption in GWh 1990-2014",xlab="Years after 1 Jan 1989",ylab="GWh")
+lines(pre$pred,col="red",lty=2)
+lines(pre$pred + 2*pre$se,col="blue",lty=2)
+lines(pre$pred - 2*pre$se,col="blue",lty=2)
+legend( x="topleft", 
+        legend=c("Actual observations","Predicted values","95% prediction bands"),
+        col=c("black","red","blue"), lwd=1, lty=c(1,2,3) 
+         )
 
-```{r, echo=FALSE}
-plot(cars)
+
+plot(ele_test,type="l",ylim=c(6000,29000),main="total Swedish electricity consumption in GWh 1990-2014",xlab="Years after 1 Jan 1989",ylab="GWh")
+lines(pre$pred,col="red",lty=2)
+lines(pre$pred + 2*pre$se,col="blue",lty=2)
+lines(pre$pred - 2*pre$se,col="blue",lty=2)
+legend( x="topleft", 
+        legend=c("Actual observations","Predicted values","95% prediction bands"),
+        col=c("black","red","blue"), lwd=1, lty=c(1,2,2) 
+)
+
+count_out_of_bands <- function(prediction,test_course){
+  counter = 0
+  for(i in 1:length(test_course)){
+    if(test_course[i] < prediction$pred[i] - 2*prediction$se[i] | test_course[i] > prediction$pred[i] + 2*prediction$se[i] ){
+      counter = counter + 1
+    }
+  }
+  return(paste("We have",counter,"observations outside the 95% prediction bands out of",length(test_course),"observations."))
+}
+
+count_out_of_bands(pre,ele_test)
 ```
+We see that the number of observations out of the 95% prediction bands are a little more than what we would expect. We believe this is due to the observations, out of pure coincidence, in the beginning of the time series exceeding the prediction bands where the prediction bands are the most narrow.
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Problem 3.c.
+Here we construct the lead-1 predictions for the validation part of the monthly electrical consumption data.
+```{r,echo=FALSE,fig.width=10}
+gather_predict1 <- function(rampup,test_course){
+  predict1vector=c()
+  for(k in 1:length(test_course)){
+    snake <- c(rampup , test_course[1:k])
+  
+    r2d2 <- Arima(snake, order = c(1,0,0), seasonal = list(order = c(1,1,0)))
+    predict1vector <-c(predict1vector,predict(r2d2,n.ahead=1)$pred)
+    
+  }
+  return(predict1vector)
+}
+
+predict1 <- gather_predict1(ele_model,ele_test)
+plot(as.numeric(ele_test),type="l",ylim=c(10000,20000),col=1,main="validation part of Electrical consumption data and Lead-1 predictions",xlab="Months after Dec 2001",ylab="Gwh")
+
+lines(predict1,col="red")
+legend( x="topleft", 
+        legend=c("Actual observations","Lead-1 Predicted values"),
+        col=c("black","red"), lwd=1, lty=c(1,1) 
+)
+
+errortermsfor3c <- as.numeric(ele_test) - predict1
+plot(errortermsfor3c,type="l",main=c("Residuals for the lead-1 predictions of the validation part of Electrical consumption data","using ARIMA(1,0,0)X(1,1,0) model"),xlab="Months after Dec 2001",ylab="Gwh")
+acf(errortermsfor3c,main=c("Autocorrelation function of the residuals of lead-1 predictions of validation data","using ARIMA(1,0,0)X(1,1,0) model"),xlab="months lag",ylab="ACF",lag.max=36)
+pacf(errortermsfor3c,main=c("Partial Autocorrelation function of the residuals of lead-1 predictions of validation data","using ARIMA(1,0,0)X(1,1,0) model"),xlab="months lag",ylab="ACF",lag.max=36)
+eacf(errortermsfor3c)
+qqnorm(errortermsfor3c,main=c("Quantiles of the residuals of lead-1 predictions of validation data","against Theoretical gaussian quantiles"), xlab="theoretical Gaussian quantiles", ylab="lead-1 prediction residual quantiles")
+qqline(errortermsfor3c)
+Box.test(errortermsfor3c,type="Ljung",lag=50)
+```
+Even though the lead-1 predictions closely follow the validation data, we also see that the Arima(1,0,0)x(1,1,0) process model constantly overshoots the validation observations and thus we have a very seasonal plot of residuals, sample ACF and sample PACF. We are not sure how to fix the overshooting. 
