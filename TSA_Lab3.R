@@ -1,7 +1,7 @@
 rm(list=ls())
 library(TSA)
-library(zoo)
-library(lubridate)
+
+
 
 
 fMRI <- read.csv2("fMRI.csv")
@@ -23,6 +23,9 @@ legend( x="topleft",
 
 fMRI_ts <- fMRI_ts[-1:-2]
 Xt <- Xt[-1:-2]
+Xt_futured <- ts(c(Xt[-1], 0))
+Xt_lagged3 <- Xt[1:(length(Xt)-3)]
+fMRI_ts_lagged3 <- fMRI_ts[4:length(fMRI_ts)]
 
 # The convention in ccf is that first.arg[t+k] get correlated with second.arg[t] at lag k.
 
@@ -80,96 +83,121 @@ ccf(fMRI_ts, Xt, lag.max = 24 ,main = " Sample Cross-Correlation between the BOL
 #could just as well be multiplied with X_5. We feel that any parameter beyond
 #lag 20 would just contribute to instability in the transfer function model.
 
-m1 <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt,
-             transfer=list(c(0,10)))
-plot(fitted(m1),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
-lines(fMRI_ts,col="black")
-resi_std1 <- rstandard(m1)
-acf(resi_std1,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
-    "of M1 model of BOLD signal"),xlab="# Measurements lag")
-pacf(resi_std1,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
-                    "of M1 model of BOLD signal"),xlab="# Measurements lag")
-eacf(resi_std1[-(1:10)])
-qqnorm(resi_std1)
-qqline(resi_std1)
-tsdiag(m1)
-
-Xt_futured <- ts(c(Xt[-1], 0))
-Xt_lagged3 <- Xt[1:(length(Xt)-3)]
-fMRI_ts_lagged3 <- fMRI_ts[4:length(fMRI_ts)]
-
-
-
-m1a <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt_futured,
-             transfer=list(c(0,10)))
-plot(fitted(m1a),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
-lines(fMRI_ts,col="black")
-resi_std1a <- rstandard(m1a)
-acf(resi_std1a,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
-                                         "of M2 model of BOLD signal"),xlab="# Measurements lag")
-pacf(resi_std1a,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
-                                          "of M2 model of BOLD signal"),xlab="# Measurements lag")
-eacf(resi_std1a[-(1:10)])
+# m1 <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt,
+#              transfer=list(c(0,10)))
+# plot(fitted(m1),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
+# lines(fMRI_ts,col="black")
+# resi_std1 <- rstandard(m1)
+# acf(resi_std1,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
+#     "of M1 model of BOLD signal"),xlab="# Measurements lag")
+# pacf(resi_std1,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
+#                     "of M1 model of BOLD signal"),xlab="# Measurements lag")
+# eacf(resi_std1[-(1:10)])
 
 
 
 
-m2 <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt_futured,
+
+# m1a <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt_futured,
+#              transfer=list(c(0,10)))
+# plot(fitted(m1a),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
+# lines(fMRI_ts,col="black")
+# resi_std1a <- rstandard(m1a)
+# acf(resi_std1a,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
+#                                          "of M2 model of BOLD signal"),xlab="# Measurements lag")
+# pacf(resi_std1a,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
+#                                           "of M2 model of BOLD signal"),xlab="# Measurements lag")
+# eacf(resi_std1a[-(1:10)])
+
+
+
+
+m2 <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt,
              transfer=list(c(2,4)))
-plot(fitted(m2),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
+plot(fitted(m2),type="l",xlim=c(1,158),ylim=c(490,530),col="red",
+     main=c("BOLD signal over time together with","fitted Transfer function model M2"),xlab="2 Second interval #",ylab="Oxygen level")
 lines(fMRI_ts,col="black")
+legend( x="bottomright", 
+        legend=c("BOLD signal","Transfer function model"),
+        col=c("black","red"), lwd=1, lty=c(1,1) 
+)
 resi_std2 <- rstandard(m2)
+plot(resi_std2,main=c("residuals of the BOLD signal fitted by Transfer function model M2"),
+     xlab="2 Second interval #",ylab="residual Oxygen level")
 acf(resi_std2,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
                      "of M2 model of BOLD signal"),xlab="# Measurements lag")
 pacf(resi_std2,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
                       "of M2 model of BOLD signal"),xlab="# Measurements lag")
 eacf(resi_std2[-(1:4)])
+qqnorm(resi_std2,main=c("Normal Q-Q plot of the residuals of the BOLD signal",
+                        "fitted by Transfer function model M2"))
+qqline(resi_std2)
 
-m2a <- arimax(fMRI_ts_lagged3, order= c(1,0,0),xtransf=Xt_lagged3,
-              transfer=list(c(2,0)))
-plot(fitted(m2a),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
-lines(fMRI_ts_lagged3,col="black")
-resi_std2a <- rstandard(m2a)
-acf(resi_std2a,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
-                                          "of M2a model of BOLD signal"),xlab="# Measurements lag")
-pacf(resi_std2a,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
-                                           "of M2a model of BOLD signal"),xlab="# Measurements lag")
-eacf(resi_std2a)
 
-m3 <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt_futured,
-             transfer = list(c(2,7)))
-plot(fitted(m3),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
-lines(fMRI_ts,col="black")
-resi_std3 <- rstandard(m3)
-acf(resi_std3,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
-                     "of M3 model of BOLD signal"),xlab="# Measurements lag")
-pacf(resi_std3,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
-                      "of M3 model of BOLD signal"),xlab="# Measurements lag")
-eacf(resi_std3[-(1:7)])
+# m2a <- arimax(fMRI_ts_lagged3, order= c(1,0,0),xtransf=Xt_lagged3,
+#               transfer=list(c(2,0)))
+# plot(fitted(m2a),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
+# lines(fMRI_ts_lagged3,col="black")
+# resi_std2a <- rstandard(m2a)
+# acf(resi_std2a,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
+#                                           "of M2a model of BOLD signal"),xlab="# Measurements lag")
+# pacf(resi_std2a,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
+#                                            "of M2a model of BOLD signal"),xlab="# Measurements lag")
+# eacf(resi_std2a)
+# 
+# m3 <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt_futured,
+#              transfer = list(c(2,7)))
+# plot(fitted(m3),type="l",xlim=c(1,158),ylim=c(500,530),col="red")
+# lines(fMRI_ts,col="black")
+# resi_std3 <- rstandard(m3)
+# acf(resi_std3,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
+#                      "of M3 model of BOLD signal"),xlab="# Measurements lag")
+# pacf(resi_std3,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
+#                       "of M3 model of BOLD signal"),xlab="# Measurements lag")
+# eacf(resi_std3[-(1:7)])
 
 
 #1.c.
+# We are inferring from help(arimax) that the omegas (besides omega_0) have
+# the opposite sign to TSA convention.
+# Addenum: after examining how coef works we are unsure about how coef works here. HOW IS ???
+m2
 
-pulseresp <- function(s,r,b,omegas,deltas){
-  results <- NULL
-  for(i in 1:(r*s){
-    results <- c(results,sum(omegas[1:i])  
-  return()
-}
+# We are going to assume that Y_0 and Y_-1 are set to zero.
+
+Ymatr <- matrix(0,length(fMRI_ts)-2,length(fMRI_ts)-2)
+diag(Ymatr) <- -m2$coef[4]
+Ymatr <- rbind(0,Ymatr)
+Ymatr <- cbind(Ymatr,0)
+diag(Ymatr) <- -m2$coef[3]
+Ymatr <- rbind(0,Ymatr)
+Ymatr <- cbind(Ymatr,0)
+diag(Ymatr) <- 1
+
+
+Xrhs <-rep(0,length(fMRI_ts))
+#Xrhs <- rep((1-m2$coef[3]-m2$coef[4])*m2$coef[2],length(fMRI_ts))
+Xrhs <- Xrhs + c(m2$coef[6],m2$coef[7],m2$coef[8],m2$coef[9],rep(0,length(fMRI_ts)-4))
+
+Xrhs <- unname(Xrhs)
+
+sol <- solve(Ymatr,Xrhs)
+plot(sol[1:15],type ="l",main="Pulse response of our M2 model, base level set to zero",,xlab="2 Second interval #",ylab="Oxygen level above base level")
+
 
 
 #Problem 2
 
 apple <- read.csv2("Apple.csv")
 apple_ts <- ts(apple[,2])
-apple_model <-apple_ts[1:(length(apple_ts)-500)]
-apple_test <- apple_ts[(length(apple_ts)-500):length(apple_ts)]
+apple_model <-ts(apple_ts[1:(length(apple_ts)-500)])
+apple_test <- ts(apple_ts[(length(apple_ts)-500):length(apple_ts)])
 
 plot(apple_ts,main="Price of Apple share from 07/07/05 to 07/07/15",ylab="$/share",xlab="Trading days after July 6th,2005")
 
-plot(apple_model)
-acf(apple_model,lag.max=2000)
-pacf(apple_model,lag.max=2000)
+plot(apple_model,typemain= "price of the Apple shares, training data")
+acf(apple_model,main= "Sample ACF of the log-difference of price of the Apple shares",lag.max=2000)
+pacf(apple_model,main= "Sample PACF of the log-difference of price of the Apple shares",lag.max=2000)
 
 # It is not stationary
 
