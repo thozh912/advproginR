@@ -4,7 +4,7 @@ library(zoo)
 library(lubridate)
 
 
-fMRI <- read.csv2("Desktop/fMRI.csv")
+fMRI <- read.csv2("fMRI.csv")
 fMRI_ts <- ts(fMRI[,2])
 
 Xt <- rep(0,9)
@@ -42,14 +42,14 @@ prewhiten(x = fMRI_ts, y = Xt, x.model = armafMRI, ylab="CCF")
 
 #Problem 2
 
-apple <- read.csv2("Desktop/Apple.csv")
+apple <- read.csv2("Apple.csv")
 apple_ts <- ts(apple[,2])
 apple_model <-apple_ts[1:(length(apple_ts)-500)]
 apple_test <- apple_ts[(length(apple_ts)-500):length(apple_ts)]
 
 plot(apple_ts,main="Price of Apple share from 07/07/05 to 07/07/15",ylab="$/share",xlab="Trading days after July 6th,2005")
-plot(apple_model)
-acf(apple_model)
+plot(apple_model,type='l')
+acf(apple_model,lag.max = 4000)
 pacf(apple_model)
 # It is not stationary
 
