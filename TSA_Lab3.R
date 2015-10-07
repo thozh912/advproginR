@@ -225,9 +225,9 @@ We are going to go with GARCH(3,2), it shows relative function convergence and i
 has non-significant box ljung test of squared residuals. b1 maybe is and b2 is probably zero
 (they are not very significant)
 
-# garch_r_app <- garch(r_app, order = c(2,2 ))
+# garch_r_app <- garch(r_app, order = c(3,1 ))
 # summary(garch_r_app)
-# 
+
 # garch_r_app2 <- garch(r_app, order = c(1, 1))
 # summary(garch_r_app2)
 
@@ -266,7 +266,10 @@ qqline(residuals(garch_r_app3))
 
 
 res <- residuals(garch_r_app3)
-acf(res[1:length(res)]^2, na.action = na.omit)
+
+
+
+#acf((res[1:length(res)])^2, na.action = na.omit,lag.max=2000)
 
 # I am dropping b2 since it is not significant. b1 has to stay in calculations because of its magnitude.
 
@@ -276,12 +279,73 @@ statvar <- garch_r_app3$coef[1] / (1- (garch_r_app3$coef[2] + garch_r_app3$coef[
 
 #Its ok, we fulfill the stationarity condition.
 
-garch32.sim <- garch.sim(alpha = c(1.93e-05,7.8e-02,7.6e-02),beta=c(0,0,6.2e-01),n=2000)
-fitt_garch <- fitted(garch_r_app)^2
-plot(fitt_garch[,1])
-plot(garch32.sim,type="l")
-summary(garch32.sim)
-blmean <- garch_r_app$coef[1]
-blse <- sqrt(garch_r_app$vcov[1,1])
-plow <- blmean - 1.96*blse
-pup <- blmean + 1.96*blse
+
+
+
+
+
+cond_var <- function(){
+  r0 <- sqrt(statvar)* rnorm(1)
+  condv <- c(statvar)
+  condv[2] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*statvar + garch_r_app3$coef[6]*statvar +
+    garch_r_app3$coef[2]*r_app[1]^2  + garch_r_app3$coef[3]*r0^2
+  condv[3] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*statvar + garch_r_app3$coef[6]*statvar +
+    garch_r_app3$coef[2]*r_app[2]^2   + garch_r_app3$coef[3]*r_app[1]^2
+  
+  for(i in 4:(length(r_app)+1)){
+    condv[i] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*condv[i-1] + garch_r_app3$coef[6]*condv[i-2] +
+      garch_r_app3$coef[2]*r_app[i-1]^2 + garch_r_app3$coef[3]*r_app[i-2]^2
+  }
+  return(condv)
+}
+
+condv <-cond_var()
+
+r_test <- ts(diff(log(apple_test)))
+hstepahead <- function(){
+  condv_h <-c(condv[length(r_app)+1])
+  condv_h[2] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]* condv[length(r_app)+1] +
+    garch_r_app3$coef[6]*condv[length(r_app)-1] + garch_r_app3$coef[2]*condv[length(r_app)+1] +
+    garch_r_app3$coef[3]*statvar
+  condv_h[3] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*condv_h[2] + garch_r_app3$coef[6]*condv[length(r_app)] +
+    garch_r_app3$coef[2]*condv_h[2] + garch_r_app3$coef[3]*condv_h[1]
+  
+  for(i in 4:(length(r_test))){
+    condv_h[i] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*condv_h[i-1] + garch_r_app3$coef[6]*condv_h[i-3] +
+      garch_r_app3$coef[2]*condv_h[i-1] + garch_r_app3$coef[3]*condv_h[i-2]
+  }
+  return(condv_h)
+ 
+  
+}
+  
+condv_h <- hstepahead()
+
+
+condv_h <- condv_h[-1]
+totalcondv <- c(condv,condv_h)
+
+plot(totalcondv,type="l",xlab="Trading days after July 6th,2005",
+     main=c("Predicted conditional variances",
+            "before 2000 trading days after July 6th 2005 they are one step ahead predictions",
+            "after that they are h step ahead predictions where h is # trading days after that date"),
+     ylab="(diff(log($/share))^2")
+abline(h=0)
+
+r_testplot <-r_test[-1]
+#r_up <- r_test[-1] + 1.96*sqrt(condv_h )
+#r_down <- r_test[-1] - 1.96*sqrt(condv_h )
+r_up <- rep(1.96*sqrt(condv_h),length(r_testplot))
+r_down <- rep(- 1.96*sqrt(condv_h ),length(r_testplot))
+sample_up <-  rep(1.96*sqrt(tsvar),length(r_testplot))
+sample_down <- rep(- 1.96*sqrt(tsvar ),length(r_testplot))
+plot(r_testplot[1:498],type="l", ylim=c(-0.08,0.12),main=c("Log-difference of price of the Apple shares",
+          "from trading days 2000 after July 6th 2005"),xlab="Trading days after 2000 days after July 6th 2005 ",ylab="diff(log($/share)")
+lines(r_down,col="blue",lty=2)
+lines(r_up ,col="blue",lty=3)
+lines(sample_down,col="red",lty=3)
+lines(sample_up,col="red",lty=3)
+legend( x="topleft", 
+        legend=c("Actual observations","Constant 95% prediction bands","H step ahead 95% prediction bands"),
+        col=c("black","red","blue"), lwd=1, lty=c(1,2,2) 
+)
