@@ -3,6 +3,7 @@ title: "Time series analysis Lab3"
 author: "Andrea Bruzzone,Thomas Zhang"
 date: "Tuesday, October 06, 2015"
 output:
+  html_document: default
   pdf_document:
     fig_height: 4
     fig_width: 6.5
@@ -78,8 +79,10 @@ qqnorm(resi_std2,main=c("Normal Q-Q plot of the residuals of the BOLD signal",
 qqline(resi_std2)
 ```
 
-It feels like the residuals are reasonably well behaved, and almost gaussian in appearance. No problems, in other words. As regards the lags above 20, we belive that it is not necessary to include parameters in the transfer function for lags greater
-than 20 because the covariate $X_t$ has periodicity 20.
+It feels like the residuals are reasonably well behaved, and almost gaussian in appearance. No problems, in other words.
+
+
+As regards the lags above 20, we belive that it is not necessary to include parameters in the transfer function for lags greater than 20 because the covariate $X_t$ has periodicity 20.
 For instance, $X_{25}$ returns the same as $X_{5}$ and and any parameter multiplied with $X_{25}$ could just as well be multiplied with $X_5$. We feel that any parameter beyond
 lag 20 would just contribute to instability in the transfer function model.
 
@@ -118,7 +121,7 @@ apple_ts <- ts(apple[,2])
 apple_model <-ts(apple_ts[1:(length(apple_ts)-500)])
 apple_test <- ts(apple_ts[(length(apple_ts)-500):length(apple_ts)])
 
-plot(apple_ts,main="Price of Apple share from 070705 to 070715",ylab="dollars per share",xlab="Trading days after July 6th,2005")
+plot(apple_ts,main="Price of Apple share from 07/07/05 to 07/07/15",ylab="dollars per share",xlab="Trading days after July 6th,2005")
 
 plot(apple_model,main="Price of the Apple shares, training data",ylab="dollars per share",xlab="Trading days after July 6th,2005")
 acf(apple_model,main= "Sample ACF of the price of the Apple shares",lag.max=2000)
@@ -134,7 +137,7 @@ pacf(r_app, main="Sample PACF of the log difference of price of the Apple shares
 
 r_app2 <- r_app^2
 plot(r_app2, main="Square of the log-difference of price of the Apple shares",ylab="square(diff(log(dollars per share)))",xlab="Trading days after July 6th,2005")
-acf(r_app2,main=c("Sample ACF of the square of the"," log-difference of price of the Apple) shares",lag.max=2000))
+acf(r_app2,main=c("Sample ACF of the square of the"," log-difference of price of the Apple shares"),lag.max=2000)
 pacf(r_app2, main=c( "Sample PACF of the square of the"," log-difference of price of the Apple shares"),lag.max=2000)
 ```
 In the log differenced data we see clear signs of volatility clustering, most clearly we see that the ACF has greater magnitude at lower lags, which is a sign of clustering. We can test the data and the square of the data using Box-Ljung on squared data, and EACF on squared data and absolute value of data below.
@@ -155,7 +158,7 @@ garch_r_app3 <- garch(r_app, order = c(3, 2))
 summary(garch_r_app3)
 ```
 .. That we are going to go with GARCH(3,2), it shows relative function convergence and it
-has non-significant Box-Ljung test of squared residuals. This means that the squared residuals magnitudes are white noise-like and pass a chi-squared test for significance at the established p-value. From the summary we see that coefficient b1 is maybe equal to zero and b2 is most probably equal to zero since they are not very significant.
+has non-significant Box-Ljung test of squared residuals. This means that the squared residuals magnitudes are white noise-like and pass a chi-squared test for significance at the established p-value. From the summary we see that coefficient b1 is maybe equal to zero and b2 is most probably equal to zero since they are not very significant. However, we must keep the b1 coefficient because it is quite large in magnitude and is necessary for calculating the unconditional variance for the weakly stationary GARCH(3,2) model. Coefficient b2 is discarded and set to zero.
 
 ```{r,echo=FALSE,fig.align='center'}
 plot(residuals(garch_r_app3), type = "h", main = "Std. Residuals from the fitted GARCH(3,2) model")
@@ -175,4 +178,87 @@ $$\begin{aligned}
 &= \omega + \beta_{1}\sigma^2_{t|t-1} + \beta_{3}\sigma^2_{t-2|t-3} + \alpha_{1}r^2_{t} + \alpha_{2}r^2_{t-1}
 \end{aligned}$$
 
-We can also recursively compute the several ahead predictor of conditional variance $\hat{\sigma}^2_{t+h|t}(h)$ according to the technique in course book (12.2.12) if we wish to (and we do).
+We can also recursively compute the several ahead predictor of conditional variance $\hat{\sigma}^2_{t+h|t}(h)$ according to the technique in course book (12.3.9) if we wish to (and we do). We do that now.
+
+```{r,echo=FALSE, fig.align='center', fig.width=8.5}
+tsvar <- var(r_app)
+statvar <- garch_r_app3$coef[1] / (1- (garch_r_app3$coef[2] + garch_r_app3$coef[3] + garch_r_app3$coef[4] + garch_r_app3$coef[6]))
+
+cond_var <- function(){
+  r0 <- sqrt(statvar)* rnorm(1)
+  condv <- c(statvar)
+  condv[2] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*statvar + garch_r_app3$coef[6]*statvar +
+    garch_r_app3$coef[2]*r_app[1]^2  + garch_r_app3$coef[3]*r0^2
+  condv[3] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*statvar + garch_r_app3$coef[6]*statvar +
+    garch_r_app3$coef[2]*r_app[2]^2   + garch_r_app3$coef[3]*r_app[1]^2
+  
+  for(i in 4:(length(r_app)+1)){
+    condv[i] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*condv[i-1] + garch_r_app3$coef[6]*condv[i-2] +
+      garch_r_app3$coef[2]*r_app[i-1]^2 + garch_r_app3$coef[3]*r_app[i-2]^2
+  }
+  return(condv)
+}
+
+condv <-cond_var()
+
+r_test <- ts(diff(log(apple_test)))
+hstepahead <- function(){
+  condv_h <-c(condv[length(r_app)+1])
+  condv_h[2] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]* condv[length(r_app)+1] +
+    garch_r_app3$coef[6]*condv[length(r_app)-1] + garch_r_app3$coef[2]*condv[length(r_app)+1] +
+    garch_r_app3$coef[3]*statvar
+  condv_h[3] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*condv_h[2] + garch_r_app3$coef[6]*condv[length(r_app)] +
+    garch_r_app3$coef[2]*condv_h[2] + garch_r_app3$coef[3]*condv_h[1]
+  
+  for(i in 4:(length(r_test))){
+    condv_h[i] <- garch_r_app3$coef[1] + garch_r_app3$coef[4]*condv_h[i-1] + garch_r_app3$coef[6]*condv_h[i-3] +
+      garch_r_app3$coef[2]*condv_h[i-1] + garch_r_app3$coef[3]*condv_h[i-2]
+  }
+  return(condv_h)
+ 
+  
+}
+  
+condv_h <- hstepahead()
+
+
+condv_h <- condv_h[-1]
+totalcondv <- c(condv,condv_h)
+
+plot(totalcondv,type="l",xlab="Trading days after July 6th,2005",
+     main=c("Predicted conditional variances",
+            "before 2000 trading days after July 6th 2005 they are one step ahead predictions",
+            "after that they are h step ahead predictions where h is # trading days after that date"),
+     ylab="(diff(log($/share))^2")
+abline(h=0)
+
+```
+We can see that the one-ahead prediction looks similar to the squared log difference of the Apple shares, as it
+should be according to the formula $r^2_{t} = \sigma^2_{t|t-1}\epsilon_{t}$. If we were to zoom in on the h ahead prediction part we would discover that the predicted conditional variance converges towards value
+$$\sigma^2= \frac{\omega}{1-\sum^{max(p,q)}_{i=1}(\beta_{i}+\alpha_{i})}$$ which is the stationary variance for the weakly stationary GARCH(3,2) model. It is a little smaller than the time series sample variance, probably because we eliminated a non-significant coefficient $\beta_{2}$.
+
+
+Now we plot the test data part of the actual time series (the log differenced price of the Apple shares) with the 95% prediction intervals for that time series computed from our h step ahead predicted conditional variances as well as a constant 95% prediction interval  calculated by the time series sample variance.
+
+```{r,echo=FALSE,fig.align='center'}
+r_testplot <-r_test[-1]
+#r_up <- r_test[-1] + 1.96*sqrt(condv_h )
+#r_down <- r_test[-1] - 1.96*sqrt(condv_h )
+r_up <- rep(1.96*sqrt(condv_h),length(r_testplot))
+r_down <- rep(- 1.96*sqrt(condv_h ),length(r_testplot))
+sample_up <-  rep(1.96*sqrt(tsvar),length(r_testplot))
+sample_down <- rep(- 1.96*sqrt(tsvar ),length(r_testplot))
+plot(r_testplot[1:498],type="l", ylim=c(-0.08,0.12),main=c("Log-difference of price of the Apple shares",
+          "from trading days 2000 after July 6th 2005"),xlab="Trading days after 2000 days after July 6th 2005 ",ylab="diff(log($/share)")
+lines(r_down,col="blue",lty=2)
+lines(r_up ,col="blue",lty=3)
+lines(sample_down,col="red",lty=3)
+lines(sample_up,col="red",lty=3)
+legend( x="topleft", 
+        legend=c("Actual observations","Constant 95% prediction bands","H step ahead 95% prediction bands"),
+        col=c("black","red","blue"), lwd=1, lty=c(1,2,2) 
+)
+```
+
+We see seven peaks which break the h step ahead prediction bands. If we assume five observations per peak we have 35 observations outside our prediction bands. This is roughly 5 percent of the 500 observations. The GARCH(3,2) model performs ok.
+
