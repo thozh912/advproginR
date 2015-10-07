@@ -77,11 +77,11 @@ ccf(fMRI_ts, Xt, lag.max = 24 ,main = " Sample Cross-Correlation between the BOL
 
 # We assume that the next value in Xt will be a zero.
 
-#It is not necessary to include parameters in the transfer function for lags greater
-#than 20 because the covariate X_t has periodicity 20.
-#For instance, X_25 returns the same as X_5 and and any parameter multiplied with X_25 
-#could just as well be multiplied with X_5. We feel that any parameter beyond
-#lag 20 would just contribute to instability in the transfer function model.
+# It is not necessary to include parameters in the transfer function for lags greater
+# than 20 because the covariate X_t has periodicity 20.
+# For instance, X_25 returns the same as X_5 and and any parameter multiplied with X_25 
+# could just as well be multiplied with X_5. We feel that any parameter beyond
+# lag 20 would just contribute to instability in the transfer function model.
 
 # m1 <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt,
 #              transfer=list(c(0,10)))
@@ -122,7 +122,7 @@ legend( x="bottomright",
         col=c("black","red"), lwd=1, lty=c(1,1) 
 )
 resi_std2 <- rstandard(m2)
-plot(resi_std2,main=c("residuals of the BOLD signal fitted by Transfer function model M2"),
+plot(resi_std2,main=c("std. residuals of the BOLD signal fitted by Transfer function model M2"),
      xlab="2 Second interval #",ylab="residual Oxygen level")
 acf(resi_std2,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
                      "of M2 model of BOLD signal"),xlab="# Measurements lag")
@@ -195,69 +195,92 @@ apple_test <- ts(apple_ts[(length(apple_ts)-500):length(apple_ts)])
 
 plot(apple_ts,main="Price of Apple share from 07/07/05 to 07/07/15",ylab="$/share",xlab="Trading days after July 6th,2005")
 
-plot(apple_model,typemain= "price of the Apple shares, training data")
+plot(apple_model,main="Price of the Apple shares, training data",ylab="$/share",xlab="Trading days after July 6th,2005")
 acf(apple_model,main= "Sample ACF of the log-difference of price of the Apple shares",lag.max=2000)
 pacf(apple_model,main= "Sample PACF of the log-difference of price of the Apple shares",lag.max=2000)
 
 # It is not stationary
+#There is volatility clustering
 
-
-r_app <- ts(diff(log(apple_model)) *100)
-plot(r_app, main= "Log-difference of price of the Apple shares")
+r_app <- ts(diff(log(apple_model)))
+plot(r_app, main= "Log-difference of price of the Apple shares",ylab="diff(log($/share)",xlab="Trading days after July 6th,2005")
 abline(h = 0)
 acf(r_app, main= "Sample ACF of the log-difference of price of the Apple shares",lag.max=2000)
 pacf(r_app, main= "Sample PACF of the log-difference of price of the Apple shares",lag.max=2000)
 
 r_app2 <- r_app^2
-plot(r_app2, main= "Square of the log-difference of price of the Apple shares")
+plot(r_app2, main= "Square of the log-difference of price of the Apple shares",ylab="(diff(log($/share))^2",xlab="Trading days after July 6th,2005")
 acf(r_app2,main= "Sample ACF of the square of the log-difference of price of the Apple shares",lag.max=2000)
 pacf(r_app2, main= "Sample PACF of the square of the log-difference of price of the Apple shares",lag.max=2000)
 
 Box.test(r_app2, type='Ljung')
 
 eacf(r_app2)
-eacf(r_app)
-#from the eacf for r_app2 maybe GARCH(3, 1)?
-#from the eacf for r_app2 maybe GARCH(3, 3)?
-#from the eacf for r_app maybe GARCH(1, 1)?
+eacf(abs(r_app))
+#from the eacf for r_app2 maybe GARCH(3, 1)? <-FALSE CONVERGENCE
+#from the eacf for r_app2 maybe GARCH(3, 3)? NA
+#from the eacf for abs(r_app) maybe GARCH(1, 1)? NA
 
-garch_r_app <- garch(r_app, order = c(3, 1))
-summary(garch_r_app)
+We are going to go with GARCH(3,2), it shows relative function convergence and it
+has non-significant box ljung test of squared residuals. b1 maybe is and b2 is probably zero
+(they are not very significant)
 
-garch_r_app2 <- garch(r_app, order = c(1, 1))
-summary(garch_r_app2)
+# garch_r_app <- garch(r_app, order = c(2,2 ))
+# summary(garch_r_app)
+# 
+# garch_r_app2 <- garch(r_app, order = c(1, 1))
+# summary(garch_r_app2)
 
 garch_r_app3 <- garch(r_app, order = c(3, 2))
 summary(garch_r_app3)
 
-garch_r_app4 <- garch(r_app, order = c(3, 3))
-summary(garch_r_app4)
+# garch_r_app4 <- garch(r_app, order = c(3, 3))
+# summary(garch_r_app4)
 
-plot(residuals(garch_r_app), type = "h", ylab = "Standardize residuals from the fitted GARCH(3,1) model")
-qqnorm(residuals(garch_r_app))
-qqline(residuals(garch_r_app))
-
-plot(residuals(garch_r_app2), type = "h", ylab = "Standardize residuals from the fitted GARCH(3,0) model")
-plot(residuals(garch_r_app3), type = "h", ylab = "Standardize residuals from the fitted GARCH(3,2) model")
-plot(residuals(garch_r_app4), type = "h", ylab = "Standardize residuals from the fitted GARCH(3,3) model")
+# All models show non-gaussian residuals..
 
 
+# plot(residuals(garch_r_app), type = "h", main = "Residuals from the fitted GARCH(3,1) model")
+# qqnorm(residuals(garch_r_app))
+# qqline(residuals(garch_r_app))
+# 
+# plot(residuals(garch_r_app2), type = "h", main = "Residuals from the fitted GARCH(3,0) model")
 
-garch_r_app_1<- garch(r_app, order = c(6, 2))
-summary(garch_r_app_1)
+plot(residuals(garch_r_app3), type = "h", main = "Std. Residuals from the fitted GARCH(3,2) model")
+qqnorm(residuals(garch_r_app3),main=c("Q-Q plot of the std. residuals from the fitted GARCH(3,2) model",
+"vs gaussian quantiles"))
+qqline(residuals(garch_r_app3))
 
-garch_r_app_2<- garch(r_app, order = c(5, 5))
-summary(garch_r_app_2)
-
-qqnorm(residuals(garch_r_app_2))
-qqline(residuals(garch_r_app_2))
+#plot(residuals(garch_r_app4), type = "h", main = "Residuals from the fitted GARCH(3,3) model")
 
 
-res <- residuals(garch_r_app)
-acf(res[2:length(res)]^2, na.action = na.pass)
+
+# garch_r_app_1<- garch(r_app, order = c(6, 2))
+# summary(garch_r_app_1)
+# 
+# garch_r_app_2<- garch(r_app, order = c(5, 5))
+# summary(garch_r_app_2)
+# 
+# qqnorm(residuals(garch_r_app_2))
+# qqline(residuals(garch_r_app_2))
+
+
+res <- residuals(garch_r_app3)
+acf(res[1:length(res)]^2, na.action = na.omit)
+
+# I am dropping b2 since it is not significant. b1 has to stay in calculations because of its magnitude.
+
+# tsvar is a little larger than statvar
+tsvar <- var(r_app)
+statvar <- garch_r_app3$coef[1] / (1- (garch_r_app3$coef[2] + garch_r_app3$coef[3] + garch_r_app3$coef[4] + garch_r_app3$coef[6]))
+
+#Its ok, we fulfill the stationarity condition.
+
+garch32.sim <- garch.sim(alpha = c(1.93e-05,7.8e-02,7.6e-02),beta=c(0,0,6.2e-01),n=2000)
 fitt_garch <- fitted(garch_r_app)^2
 plot(fitt_garch[,1])
-
+plot(garch32.sim,type="l")
+summary(garch32.sim)
 blmean <- garch_r_app$coef[1]
 blse <- sqrt(garch_r_app$vcov[1,1])
 plow <- blmean - 1.96*blse

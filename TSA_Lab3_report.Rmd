@@ -1,0 +1,178 @@
+---
+title: "Time series analysis Lab3"
+author: "Andrea Bruzzone,Thomas Zhang"
+date: "Tuesday, October 06, 2015"
+output:
+  pdf_document:
+    fig_height: 4
+    fig_width: 6.5
+---
+##Problem 1
+###1.a.
+We plot the BOLD signal and the time series $X_{t}$. The height scale of $X_{t}$ has been changed for better visuals.
+
+```{r,echo =FALSE,message=FALSE}
+library(TSA)
+```
+
+```{r,echo=FALSE}
+fMRI <- read.csv2("fMRI.csv")
+fMRI_ts <- ts(fMRI[,2])
+
+Xt <- rep(0,9)
+Xt <-ts(c(Xt,rep(c(rep(1,10),rep(0,10)),8)))
+Xt <- Xt[-(length(Xt)-8):-length(Xt)]
+```
+
+```{r, echo=FALSE,fig.align='center'}
+plot(fMRI_ts,ylim=c(500,540),type="l",main=expression("BOLD signal over time together with a time series X"[t]),xlab="2 Second interval #",ylab="Oxygen level")
+lines(510 +15 * Xt ,col="red")
+legend( x="topleft", 
+        legend=c("BOLD signal",expression("X"[t])),
+        col=c("black","red"), lwd=1, lty=c(1,1) 
+)
+```
+We see that the BOLD signal has a clear lag against $X_{t}$ throughout the time series. It is also clear that the first two measurements of the BOLD signal are instrumentation artefacts, so we remove them from the time series henceforth. No clear outliers except maybe the first peak, periodicity of $X_{t}$ is 20 seconds.
+
+```{r,echo=FALSE}
+# discarding first two observations of fMRI and Xt
+fMRI_ts <- fMRI_ts[-1:-2]
+Xt <- Xt[-1:-2]
+Xt_futured <- ts(c(Xt[-1], 0))
+Xt_lagged3 <- Xt[1:(length(Xt)-3)]
+fMRI_ts_lagged3 <- fMRI_ts[4:length(fMRI_ts)]
+```
+###1.b.
+Now let us take a look at the corss-correlation between BOLD signal and $X_{t}$.
+```{r,echo=FALSE,fig.align='center'}
+# The convention in ccf is that first.arg[t+k] get correlated with second.arg[t] at lag k.
+
+ccf(Xt, fMRI_ts, lag.max = 24 ,main = " Sample Cross-Correlation between Xt and the BOLD signal", ylab = "CCF")
+```
+It seems as if the lag is about 3-4 seconds on average between $X_{t}$ and BOLD signal. That seems to be the physiological lag in neuronal activity in the brain when it comes to observing images. We now try to find a transfer function model for the BOLD signal,
+taking $X_{t}$ as its covariate.
+```{r,echo=FALSE,fig.align='center'}
+m2 <- arimax(fMRI_ts, order= c(1,0,0),xtransf=Xt,
+             transfer=list(c(2,4)))
+plot(fitted(m2),type="l",xlim=c(1,158),ylim=c(490,530),col="red",
+     main=c("BOLD signal over time together with","fitted Transfer function model M2"),xlab="2 Second interval #",ylab="Oxygen level")
+lines(fMRI_ts,col="black")
+legend( x="bottomright", 
+        legend=c("BOLD signal","Transfer function model"),
+        col=c("black","red"), lwd=1, lty=c(1,1) 
+)
+```
+We find that this transfer function with parameters b=0, r=2, s=4, and an AR(1) transfer function for the noise is good. The mathematical expression,where let us say $Y_{t}$ is the BOLD signal, is $$Y_{t} = \beta_{0} + \frac{\left(\omega_{0} - \omega_{1}B -\omega_{2}B^{2} -\omega_{3}B^{3} -\omega_{4}B^{4}\right)}{\left(1-\delta_{1}B-\delta_{2}B^2\right)}X_{t} + \frac{1}{1-\phi_{1}B}e_{t}$$ where $e_{t}$ is standard white noise. How good is this transfer function? Let us take a look at the residuals.
+
+```{r,echo=FALSE}
+resi_std2 <- rstandard(m2)
+plot(resi_std2,main=c("std. residuals of the BOLD signal","fitted by Transfer function model M2"),
+     xlab="2 Second interval #",ylab="residual Oxygen level")
+acf(resi_std2,na.action = na.pass,main=c("sample auto-correlation of standardized residuals",
+                     "of M2 model of BOLD signal"),xlab="# Measurements lag")
+pacf(resi_std2,na.action = na.pass,main=c("sample partial auto-correlation of standardized residuals",
+                      "of M2 model of BOLD signal"),xlab="# Measurements lag")
+eacf(resi_std2[-(1:4)])
+qqnorm(resi_std2,main=c("Normal Q-Q plot of the residuals of the BOLD signal",
+                        "fitted by Transfer function model M2"))
+qqline(resi_std2)
+```
+
+It feels like the residuals are reasonably well behaved, and almost gaussian in appearance. No problems, in other words. As regards the lags above 20, we belive that it is not necessary to include parameters in the transfer function for lags greater
+than 20 because the covariate $X_t$ has periodicity 20.
+For instance, $X_{25}$ returns the same as $X_{5}$ and and any parameter multiplied with $X_{25}$ could just as well be multiplied with $X_5$. We feel that any parameter beyond
+lag 20 would just contribute to instability in the transfer function model.
+
+###1.c.
+Now let us look at the pulse response of the model, with no noise. $\beta_{0}$ is set as the zero level.
+```{r,echo=FALSE,fig.align='center'}
+# We are going to assume that Y_0 and Y_-1 are set to zero.
+
+Ymatr <- matrix(0,length(fMRI_ts)-2,length(fMRI_ts)-2)
+diag(Ymatr) <- -m2$coef[4]
+Ymatr <- rbind(0,Ymatr)
+Ymatr <- cbind(Ymatr,0)
+diag(Ymatr) <- -m2$coef[3]
+Ymatr <- rbind(0,Ymatr)
+Ymatr <- cbind(Ymatr,0)
+diag(Ymatr) <- 1
+
+
+Xrhs <-rep(0,length(fMRI_ts))
+#Xrhs <- rep((1-m2$coef[3]-m2$coef[4])*m2$coef[2],length(fMRI_ts))
+Xrhs <- Xrhs + c(m2$coef[6],m2$coef[7],m2$coef[8],m2$coef[9],rep(0,length(fMRI_ts)-4))
+
+Xrhs <- unname(Xrhs)
+
+sol <- solve(Ymatr,Xrhs)
+plot(sol[1:15],type ="l",main="Pulse response of our M2 model, base level set to zero",,xlab="2 Second interval #",ylab="Oxygen level above base level")
+```
+The graph is reminiscent of the canonical HRF in the lab instructions. Coincidence? We think not. Probably this is to be expected. A smaller mesurement interval is to be desired.
+
+##Problem 2
+###2.a.
+Let us take a look at the training data.
+```{r,echo=FALSE,fig.align='center'}
+apple <- read.csv2("Apple.csv")
+apple_ts <- ts(apple[,2])
+apple_model <-ts(apple_ts[1:(length(apple_ts)-500)])
+apple_test <- ts(apple_ts[(length(apple_ts)-500):length(apple_ts)])
+
+plot(apple_ts,main="Price of Apple share from 070705 to 070715",ylab="dollars per share",xlab="Trading days after July 6th,2005")
+
+plot(apple_model,main="Price of the Apple shares, training data",ylab="dollars per share",xlab="Trading days after July 6th,2005")
+acf(apple_model,main= "Sample ACF of the price of the Apple shares",lag.max=2000)
+pacf(apple_model,main= "Sample PACF of the price of the Apple shares",lag.max=2000)
+```
+It does not look like the training data is stationary or white. Let us look further at the Log difference of this data.
+```{r,echo=FALSE,fig.align='center'}
+r_app <- ts(diff(log(apple_model)))
+plot(r_app, main="Log difference of price of the Apple shares",ylab="diff(log(dollars per share))",xlab="Trading days after July 6th,2005")
+
+acf(r_app, main="Sample ACF of the log difference of price of the Apple shares",lag.max=2000)
+pacf(r_app, main="Sample PACF of the log difference of price of the Apple shares",lag.max=2000)
+
+r_app2 <- r_app^2
+plot(r_app2, main="Square of the log-difference of price of the Apple shares",ylab="square(diff(log(dollars per share)))",xlab="Trading days after July 6th,2005")
+acf(r_app2,main=c("Sample ACF of the square of the"," log-difference of price of the Apple) shares",lag.max=2000))
+pacf(r_app2, main=c( "Sample PACF of the square of the"," log-difference of price of the Apple shares"),lag.max=2000)
+```
+In the log differenced data we see clear signs of volatility clustering, most clearly we see that the ACF has greater magnitude at lower lags, which is a sign of clustering. We can test the data and the square of the data using Box-Ljung on squared data, and EACF on squared data and absolute value of data below.
+
+```{r,fig.align='center'}
+Box.test(r_app2, type='Ljung')
+eacf(r_app2)
+eacf(abs(r_app))
+```
+We interpret the results from the tests as indicating an GARCH model of order $(p,q)=(3,1)$ or $(p,q)=(3,2)$ as suitable for the log differenced data. Model picking shows..
+
+```{r,echo=FALSE,eval=TRUE}
+garch_r_app3 <- garch(r_app, order = c(3, 2))
+```
+
+```{r}
+
+summary(garch_r_app3)
+```
+.. That we are going to go with GARCH(3,2), it shows relative function convergence and it
+has non-significant Box-Ljung test of squared residuals. This means that the squared residuals magnitudes are white noise-like and pass a chi-squared test for significance at the established p-value. From the summary we see that coefficient b1 is maybe equal to zero and b2 is most probably equal to zero since they are not very significant.
+
+```{r,echo=FALSE,fig.align='center'}
+plot(residuals(garch_r_app3), type = "h", main = "Std. Residuals from the fitted GARCH(3,2) model")
+qqnorm(residuals(garch_r_app3),main=c("Q-Q plot of the std. residuals from the fitted GARCH(3,2) model",
+"vs gaussian quantiles"))
+qqline(residuals(garch_r_app3))
+```
+We see that the residuals probably are not gaussian. None of the GARCH models we investigated had guassian residuals or non-significant Jarque-Bera tests.
+
+###2.c.
+The one ahead predictor of conditional variance, $\hat{\sigma}^2_{t+1|t}(1)$ is easily computed by applying the definition of prediction to our knowledge position at time $t$.
+
+$$\begin{aligned}
+\hat{\sigma}^2_{t+1|t}(1) &= \textbf{E}\left[\sigma^2_{t+1|t} | \sigma^2_{t|t-1},\epsilon_{t},r_{t},\sigma^2_{t-1|t-2},\ldots \right]\\
+&= \textbf{E}\left[\omega + \beta_{1}\sigma^2_{t|t-1} + \beta_{3}\sigma^2_{t-2|t-3} + \alpha_{1}r^2_{t} + \alpha_{2}r^2_{t-1}| \sigma^2_{t|t-1},\epsilon_{t},r_{t},\sigma^2_{t-1|t-2},\ldots \right]\\
+&= \omega + \beta_{1}\sigma^2_{t|t-1} + \beta_{3}\sigma^2_{t-2|t-3} + \alpha_{1}\textbf{E}\left[r^2_{t} | \sigma^2_{t|t-1},\epsilon_{t},r_{t},\sigma^2_{t-1|t-2},\ldots \right] + \alpha_{2}\textbf{E}\left[r^2_{t-1} | \sigma^2_{t|t-1},\epsilon_{t},r_{t},\sigma^2_{t-1|t-2},\ldots \right]\\
+&= \omega + \beta_{1}\sigma^2_{t|t-1} + \beta_{3}\sigma^2_{t-2|t-3} + \alpha_{1}r^2_{t} + \alpha_{2}r^2_{t-1}
+\end{aligned}$$
+
+We can also recursively compute the several ahead predictor of conditional variance $\hat{\sigma}^2_{t+h|t}(h)$ according to the technique in course book (12.2.12) if we wish to (and we do).
